@@ -38,6 +38,7 @@ Image* readP6(char file[])	{
 	//check for comments
     int c = getc(img);
     while (c == '#') {
+		#pragma GCC diagnostic ignored "-Wempty-body"
     	while (getc(img) != '\n');
         c = getc(img);
     }
