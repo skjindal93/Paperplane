@@ -6,28 +6,19 @@
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 
-#include <iostream>
-using namespace std;
-
 #include "ppm.h"
 
 Image::Image(int w, int h)	{
 	this->w = w;
 	this->h = h;
-	pixel = new float**[w];
-	for (int i = 0; i < w; ++i)	{
-		pixel[i] = new float*[h];
-		for(int j = 0; j < h; ++j)
-			pixel[i][j] = new float[3];
-	}
+	pixel = new glm::vec3*[w];
+	for (int i = 0; i < w; ++i)
+		pixel[i] = new glm::vec3[h];
 }
 
 Image::~Image()	{
-	for (int i = 0; i < w; ++i)	{
-		for(int j = 0; j < h; ++j)
-			delete[] pixel[i][j];
+	for (int i = 0; i < w; ++i)
 		delete[] pixel[i];
-	}
 	delete[] pixel;
 }
 

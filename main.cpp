@@ -1,9 +1,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <cmath>
-#include <cstring>
 #include <iostream>
+#include <cstring>
+#include <cmath>
+#include <algorithm>
 using namespace std;
 
 #ifdef __APPLE__
@@ -15,48 +16,11 @@ using namespace std;
 #include <GL/glut.h>
 #endif
 
-#include "ppm.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
-
-/////////////////////////////////////////////////////////////
-////////////////// Math and Vector Functions ////////////////
-/////////////////////////////////////////////////////////////
-
-double sind(double angle)	{
-	return sin(angle*3.14159/180);
-}
-
-double cosd(double angle)	{
-	return cos(angle*3.14159/180);
-}
-
-void normalize3(GLfloat *v)	{
-	GLfloat r = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-	if(r > 0)	{
-		v[0] /= r;
-		v[1] /= r;
-		v[2] /= r;
-	}
-}
-
-GLfloat* cross3(GLfloat *x, GLfloat *y)	{
-	GLfloat *c = new GLfloat[3];
-	
-	c[0] = x[1]*y[2] - y[1]*x[2];
-	c[1] = x[2]*y[0] - y[2]*x[0];
-	c[2] = x[0]*y[1] - y[0]*x[1];
-	
-	return c;
-}
-
-GLfloat max(GLfloat a, GLfloat b)	{
-	return a > b ? a : b;
-}
-
-GLfloat min(GLfloat a, GLfloat b)	{
-	return a < b ? a : b;
-}
-
+#include "terrain.h"
 
 /////////////////////////////////////////////////////////////
 ////////////////////// Render Functions /////////////////////
@@ -78,7 +42,8 @@ GLfloat min(GLfloat a, GLfloat b)	{
 /////////////////////////////////////////////////////////////
 
 GLint run, winW, winH, keyModifiers;
-GLfloat eye[3], up[3], center[3], step, zoom;
+glm::vec3 eye, up, center;
+GLfloat step, zoom;
 GLUquadricObj* myQuadric = 0;
 GLint slices, stacks;
 GLfloat planeX, planeY, curZ;
@@ -86,14 +51,13 @@ GLfloat planeX, planeY, curZ;
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
 	zoom = 1.0f;
-	eye[0] = 0.0f;
-	eye[1] = 0.0f;
-	eye[2] = 0.0f;
-	up[0] = 0.0f;
+	
+	eye = glm::vec3(0.0f);
+	up = glm::vec3(0.0f);
 	up[1] = 1.0f;
-	up[2] = 0.0f;
-	center[0] = center[1] = 0.0f;
+	center = glm::vec3(0.0f);
 	center[2] = -10.0f;
+	
 	step = 0.5;
 	slices = 150;
 	stacks = 100;
@@ -168,10 +132,10 @@ void resizeWindow(int w, int h)	{
 void keyboardFunc(unsigned char key, int x, int y)	{
 	keyModifiers = glutGetModifiers();
 	
-	GLfloat dir[3] = {center[0] - eye[0], center[1] - eye[1], center[2] - eye[2]};
-	normalize3(dir);
-	GLfloat *right = cross3(dir, up);
-	normalize3(right);
+//	glm::vec3 dir = glm::vec3(center[0] - eye[0], center[1] - eye[1], center[2] - eye[2]);
+//	glm::normalize(dir);
+//	glm::vec3 right = glm::cross(dir, up);
+//	glm::normalize(right);
 	
 	glutPostRedisplay();
 	
@@ -204,8 +168,8 @@ void hoverFunc(int x, int y)	{
 	x += winW/6.0f;
 	y += winH/6.0f;
 	
-	GLfloat w = 8.0f * winW / 6.0f;
-	GLfloat h = 8.0f * winH / 6.0f;
+	GLint w = 8.0f * winW / 6.0f;
+	GLint h = 8.0f * winH / 6.0f;
 	
 	x = min(max(0, x), w);
 	y = min(max(0, y), h);
@@ -334,7 +298,7 @@ void drawScene()	{
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
 	
-	normalize3(up);
+	glm::normalize(up);
 	gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 	// Only now draw anything you want to.
 	

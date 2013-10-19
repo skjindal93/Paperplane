@@ -1,30 +1,34 @@
 //
-//  ppm.h
+//  terrain.h
 //  PaperPlane
 //
 //  Created by Shivanker Goel on 19/10/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 
-#ifndef __PaperPlane__ppm__
-#define __PaperPlane__ppm__
+#ifndef __PaperPlane__terrain__
+#define __PaperPlane__terrain__
 
 #include <iostream>
 using namespace std;
+
+#include "ppm.h"
 
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-class Image	{
+class Terrain {
 public:
 	int w, h;
-	glm::vec3 **pixel;
+	float** heights;
+	glm::vec3** normals;
 
-	Image(int w, int h);
-	~Image();
+	Terrain(Image*);
+	void computeNormals();
+	
+	~Terrain();
 };
 
-Image* readP6(char file[]);
 
-#endif /* defined(__PaperPlane__ppm__) */
+#endif /* defined(__PaperPlane__terrain__) */
