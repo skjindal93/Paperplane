@@ -12,6 +12,15 @@
 #include <iostream>
 using namespace std;
 
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
+#ifdef _WIN32
+#include <windows.h>
+#endif
+#include <GL/glut.h>
+#endif
+
 #include "ppm.h"
 
 #include "glm/glm.hpp"
@@ -26,6 +35,7 @@ public:
 
 	Terrain(Image*);
 	void computeNormals();
+	void create(GLfloat height, GLfloat size);
 	
 	~Terrain();
 };

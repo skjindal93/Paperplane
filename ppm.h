@@ -25,6 +25,6 @@ public:
 	~Image();
 };
 
-Image* readP6(char file[]);
+Image* readP6(char* file);
 
 #endif /* defined(__PaperPlane__ppm__) */

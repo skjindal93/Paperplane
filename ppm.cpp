@@ -23,7 +23,7 @@ Image::~Image()	{
 }
 
 
-Image* readP6(char file[])	{
+Image* readP6(char* file)	{
 	FILE *img;
 	img = fopen(file, "rb");
 	char buff[16];

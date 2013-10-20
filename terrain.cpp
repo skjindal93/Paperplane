@@ -89,6 +89,37 @@ void Terrain::computeNormals()	{
 		}
 }
 
+void Terrain::create(GLfloat height, GLfloat size)	{
+	glPushMatrix();
+	glPushAttrib(GL_CURRENT_BIT);
+	
+	float scale = size / max(w - 1, h - 1);
+    glScalef(scale, height, scale);
+    glTranslatef(- w / 2,
+                 0.0f,
+                 - h / 2);
+	
+	glColor3f(0.3f, 0.3f, 0.3f);
+    for(int z = 0; z < h - 1; z++) {
+        
+		glBegin(GL_TRIANGLE_STRIP);
+			for(int x = 0; x < w; x++) {
+				glm::vec3 normal = normals[x][z];
+				glNormal3f(normal[0], normal[1], normal[2]);
+				glVertex3f(x, heights[x][z], z);
+				
+				normal = normals[x][z + 1];
+				glNormal3f(normal[0], normal[1], normal[2]);
+				glVertex3f(x, heights[x][z + 1], z + 1);
+			}
+        glEnd();
+		
+    }
+	
+	glPopAttrib();
+	glPopMatrix();
+}
+
 Terrain::~Terrain()	{
 	for (int i = 0; i < w; ++i) {
 		delete[] heights[i];

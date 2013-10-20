@@ -47,6 +47,8 @@ GLfloat step, zoom;
 GLUquadricObj* myQuadric = 0;
 GLint slices, stacks;
 GLfloat planeX, planeY, curZ;
+Terrain *terr;
+char *terr_heightmap;
 
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -100,6 +102,15 @@ void GLInit()	{
 	glEnable(GL_MULTISAMPLE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	
+	glEnable(GL_LIGHTING); //Enable lighting
+    glEnable(GL_LIGHT0); //Enable light #0
+    glEnable(GL_LIGHT1); //Enable light #1
+    glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
+    glShadeModel(GL_SMOOTH); //Enable smooth shading
+	
+	Image *img = readP6(terr_heightmap);
+	if(img != NULL)
+		terr = new Terrain(img);
 }
 
 // glut's window resize function
@@ -269,12 +280,12 @@ void drawStatics()	{
 	glPushMatrix();
 	glPushAttrib(GL_CURRENT_BIT);
 	
-	glColor3f(0.0f, 0.0f, 0.5f);
-	glTranslatef(0.0f, -6.5f, 0.0f);
-	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
-	for(int i = 0; i < 40; ++i)	{
-		gluDisk(myQuadric, 0.0f, 5.0f, 100, 100);
-		glTranslatef(0.0f, -30.0f, 0.0f);
+	GLfloat size = 500.0f, height = 25.0f;
+	glTranslatef(0.0f, -50.0f, 0.0f);
+	for(int i = 0, p = -curZ/size; i < 2; ++i, ++p)	{
+		glTranslatef(0.0f, 0.0f, -(size * p + size / 2)/2);
+		if(terr != NULL)
+			terr->create(height, size);
 	}
 	
 	glPopAttrib();
@@ -304,6 +315,7 @@ void drawScene()	{
 	
 	drawStatics();
 	glTranslatef(0.0f, 0.0f, curZ);
+	cout<<curZ<<endl;
 	drawMoving();
 	
 	glutSwapBuffers();
@@ -338,6 +350,9 @@ int main(int argc, char * argv[])		{
 	
 	//initialize constants
 	initConstants();
+	
+	terr_heightmap = new char[200];
+	strcpy(terr_heightmap, "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.world.5400x2700.ppm");
 	
 	// Initialize OpenGL.
 	GLInit();
