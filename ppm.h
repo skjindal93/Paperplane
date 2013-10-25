@@ -9,12 +9,7 @@
 #ifndef __PaperPlane__ppm__
 #define __PaperPlane__ppm__
 
-#include <iostream>
-using namespace std;
-
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include "paperplane.h"
 
 class Image	{
 public:
@@ -25,6 +20,7 @@ public:
 	~Image();
 };
 
-Image* readP6(char* file);
+Image* readP6(const char* file);
+GLuint loadTexture(const char* file);
 
 #endif /* defined(__PaperPlane__ppm__) */

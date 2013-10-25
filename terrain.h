@@ -9,31 +9,16 @@
 #ifndef __PaperPlane__terrain__
 #define __PaperPlane__terrain__
 
-#include <iostream>
-using namespace std;
-
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
-#ifdef _WIN32
-#include <windows.h>
-#endif
-#include <GL/glut.h>
-#endif
-
-#include "ppm.h"
-
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include "paperplane.h"
 
 class Terrain {
 public:
 	int w, h;
+	GLuint texture;
 	float** heights;
 	glm::vec3** normals;
 
-	Terrain(Image*);
+	Terrain(Image* hmap, const char* texture = NULL);
 	void computeNormals();
 	void create(GLfloat height, GLfloat size);
 	

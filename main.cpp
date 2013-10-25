@@ -1,40 +1,12 @@
+//
+//  main.cpp
+//  PaperPlane
+//
+//  Created by Shivanker Goel on 15/10/13.
+//  Copyright (c) 2013 Shivanker. All rights reserved.
+//
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <cstring>
-#include <cmath>
-#include <algorithm>
-using namespace std;
-
-#ifdef __APPLE__
-#include <GLUT/glut.h>
-#else
-#ifdef _WIN32
-#include <windows.h>
-#endif
-#include <GL/glut.h>
-#endif
-
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
-
-#include "terrain.h"
-
-/////////////////////////////////////////////////////////////
-////////////////////// Render Functions /////////////////////
-/////////////////////////////////////////////////////////////
-
-//void closedCylinder(GLUquadric *quad, GLdouble base, GLdouble top, GLdouble height, GLint slices, GLint stacks)	{
-//	glPushMatrix();
-//	gluCylinder(quad, base, top, height, slices, stacks);
-//	gluDisk(quad, 0.0f, base, slices, 1);
-//	glTranslatef(0.0f, 0.0f, height);
-//	gluDisk(quad, 0.0f, top, slices, 1);
-//	glPopMatrix();
-//}
-
+#include "paperplane.h"
 
 
 /////////////////////////////////////////////////////////////
@@ -48,7 +20,11 @@ GLUquadricObj* myQuadric = 0;
 GLint slices, stacks;
 GLfloat planeX, planeY, curZ;
 Terrain *terr;
-char *terr_heightmap;
+char *terr_heightmap, *terr_texture;
+glm::vec3 specular, diffuse, ambient;
+int t1, t2, frameCount;
+GLfloat fps;
+GLvoid *font_style;
 
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -67,11 +43,65 @@ void initConstants()	{
 	
 	curZ = -5.0f;
 	
+	diffuse = glm::vec3(1.0f);
+	specular = glm::vec3(240.0f, 240.0f, 188.0f)/250.0f;
+	ambient = 1.0f - specular + 0.25f * diffuse;
+	
+	font_style = GLUT_BITMAP_HELVETICA_12;
+	
+	t1 = glutGet(GLUT_ELAPSED_TIME);
+	frameCount = 0;
+	fps = 0.0f;
+	
 	glutPostRedisplay();
 }
 
-
-
+//int _vscprintf (const char * format, va_list pargs) {
+//	int retval;
+//	va_list argcopy;
+//	va_copy(argcopy, pargs);
+//	retval = vsnprintf(NULL, 0, format, pargs);
+//	va_end(argcopy);
+//	return retval;
+//}
+//
+////-------------------------------------------------------------------------
+////  Draws a string at the specified coordinates.
+////-------------------------------------------------------------------------
+//void printw (float x, float y, float z, char* format, ...)
+//{
+//    va_list args;   //  Variable argument list
+//    int len;        // String length
+//    int i;          //  Iterator
+//    char * text;    // Text
+//	
+//    //  Initialize a variable argument list
+//    va_start(args, format);
+//	
+//    //  Return the number of characters in the string referenced the list of arguments.
+//    // _vscprintf doesn't count terminating '\0' (that's why +1)
+//    len = _vscprintf(format, args) + 1;
+//	
+//    //  Allocate memory for a string of the specified size
+//    text = new char[len];
+//	
+//    //  Write formatted output using a pointer to the list of arguments
+//	vsprintf(text, format, args);
+//	//    vsprintf(text, len, format, args);
+//	
+//    //  End using variable argument list
+//    va_end(args);
+//	
+//    //  Specify the raster position for pixel operations.
+//    glRasterPos3f (x, y, z);
+//	
+//    //  Draw the characters one by one
+//    for (i = 0; text[i] != '\0'; i++)
+//		glutBitmapCharacter(font_style, text[i]);
+//	
+//    //  Free the allocated memory for the string
+//	delete[] text;
+//}
 
 
 /////////////////////////////////////////////////////////////
@@ -86,7 +116,7 @@ void GLInit()	{
 	gluQuadricNormals( myQuadric, GL_TRUE );
 	gluQuadricOrientation(myQuadric, GLU_OUTSIDE);
 	gluQuadricDrawStyle(myQuadric, GLU_FILL);
-	
+
 	//	glPointSize(8);
 	//	glLineWidth(5);
     
@@ -103,14 +133,25 @@ void GLInit()	{
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	
 	glEnable(GL_LIGHTING); //Enable lighting
-    glEnable(GL_LIGHT0); //Enable light #0
-    glEnable(GL_LIGHT1); //Enable light #1
+	
+	glEnable(GL_LIGHT0); //Enable light #0
+	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(specular));
+	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(diffuse));
+	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(ambient));
+	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 20.0f, -10.0f)));
+	
+	glEnable(GL_LIGHT1); //Enable light #1
+	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
+	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
+	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
+	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 20.0f, -10.0f)));
+		
     glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
     glShadeModel(GL_SMOOTH); //Enable smooth shading
 	
 	Image *img = readP6(terr_heightmap);
 	if(img != NULL)
-		terr = new Terrain(img);
+		terr = new Terrain(img, terr_texture);
 }
 
 // glut's window resize function
@@ -304,7 +345,7 @@ void drawMoving()	{
 
 // glut's Main Display Function
 void drawScene()	{
-	glClearColor(1.0f, 1.0f, 1.0f, 0.0f); // Clear the background of our window to white
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to white
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the rendering window
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
@@ -315,10 +356,21 @@ void drawScene()	{
 	
 	drawStatics();
 	glTranslatef(0.0f, 0.0f, curZ);
-	cout<<curZ<<endl;
+	//cout<<curZ<<endl;
 	drawMoving();
 	
 	glutSwapBuffers();
+	frameCount++;
+	
+	t2 = glutGet(GLUT_ELAPSED_TIME);
+	double dt = ((double)t2 - (double)t1) / (double)1000;
+	if(dt > 0.25)	{
+		fps = (double)frameCount/dt;
+		cout << fps << " FPS\n";
+		t1 = glutGet(GLUT_ELAPSED_TIME);
+		frameCount = 0;
+	}
+	
 	if(run)
 		glutPostRedisplay();
 	
@@ -351,8 +403,9 @@ int main(int argc, char * argv[])		{
 	//initialize constants
 	initConstants();
 	
-	terr_heightmap = new char[200];
-	strcpy(terr_heightmap, "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.world.5400x2700.ppm");
+#pragma GCC diagnostic ignored "-Wwrite-strings"
+	terr_heightmap = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.world.540x270.ppm";
+	terr_texture = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.world.540x270.ppm";
 	
 	// Initialize OpenGL.
 	GLInit();
@@ -361,7 +414,7 @@ int main(int argc, char * argv[])		{
 	glutDisplayFunc( drawScene );
 	
 	// Set up callback functions for key presses
-	glutKeyboardFunc( keyboardFunc );
+	glutKeyboardFunc(keyboardFunc);
     glutSpecialFunc(specialKeys);
 	
 	// Set up the callback function for resizing windows

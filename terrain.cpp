@@ -6,9 +6,9 @@
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 
-#include "terrain.h"
+#include "paperplane.h"
 
-Terrain::Terrain(Image* img)	{
+Terrain::Terrain(Image* img, const char* texFile)	{
     w = img->w;
 	h = img->h;
 	
@@ -27,6 +27,9 @@ Terrain::Terrain(Image* img)	{
 			heights[i][j] = (img->pixel[i][j][0] + img->pixel[i][j][1] + img->pixel[i][j][2])/3;
     
 	computeNormals();
+	if(texFile)
+		texture = loadTexture(texFile);
+
 }
 
 void Terrain::computeNormals()	{
@@ -99,28 +102,40 @@ void Terrain::create(GLfloat height, GLfloat size)	{
                  0.0f,
                  - h / 2);
 	
-	glColor3f(0.3f, 0.3f, 0.3f);
+	if(texture)	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture);
+	}
+	else
+		glColor3f(0.3f, 0.3f, 0.3f);
+	
     for(int z = 0; z < h - 1; z++) {
         
 		glBegin(GL_TRIANGLE_STRIP);
 			for(int x = 0; x < w; x++) {
 				glm::vec3 normal = normals[x][z];
 				glNormal3f(normal[0], normal[1], normal[2]);
+				if(texture) glTexCoord2f((float)x/w, (float)z/h);
 				glVertex3f(x, heights[x][z], z);
 				
 				normal = normals[x][z + 1];
 				glNormal3f(normal[0], normal[1], normal[2]);
+				if(texture) glTexCoord2f((float)x/w, (float)(z+1)/h);
 				glVertex3f(x, heights[x][z + 1], z + 1);
 			}
         glEnd();
 		
     }
+	if(texture) glDisable(GL_TEXTURE_2D);
 	
 	glPopAttrib();
 	glPopMatrix();
 }
 
 Terrain::~Terrain()	{
+	
+	glDeleteTextures( 1, &texture );
+	
 	for (int i = 0; i < w; ++i) {
 		delete[] heights[i];
 		delete[] normals[i];
