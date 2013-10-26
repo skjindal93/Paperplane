@@ -22,7 +22,7 @@ public:
 	Terrain(Image* hmap, const char* texture = NULL);
 	void computeNormals();
 	void render(GLfloat height, GLfloat size);
-	void buildArraysVBOs();
+	void buildArrayBuffers();
 	
 	~Terrain();
 };

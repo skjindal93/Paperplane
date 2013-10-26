@@ -30,7 +30,7 @@ Terrain::Terrain(Image* img, const char* texFile)	{
 	if(texFile)
 		texture = loadTexture(texFile);
 	
-	buildArraysVBOs();
+	buildArrayBuffers();
 }
 
 void Terrain::computeNormals()	{
@@ -93,7 +93,7 @@ void Terrain::computeNormals()	{
 		}
 }
 
-void Terrain::buildArraysVBOs()	{
+void Terrain::buildArrayBuffers()	{
 	ntri = (w-1)*(h-1)*2;
 	nvert = ntri*3;
 	
