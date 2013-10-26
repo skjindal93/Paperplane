@@ -29,7 +29,8 @@ Terrain::Terrain(Image* img, const char* texFile)	{
 	computeNormals();
 	if(texFile)
 		texture = loadTexture(texFile);
-
+	
+	buildArraysVBOs();
 }
 
 void Terrain::computeNormals()	{
@@ -88,11 +89,66 @@ void Terrain::computeNormals()	{
 			
 			if (glm::length(sum) < 1e-4)
 				sum = glm::vec3(0.0f, 1.0f, 0.0f);
-			normals[x][z] = glm::normalize(sum);
+			normals[x][z] = sum;
 		}
 }
 
-void Terrain::create(GLfloat height, GLfloat size)	{
+void Terrain::buildArraysVBOs()	{
+	ntri = (w-1)*(h-1)*2;
+	nvert = ntri*3;
+	
+	struct vec3 {
+		float x, y, z;
+	};
+	struct vec3 *vertexArray, *normalArray;
+	vertexArray = new struct vec3[nvert];
+	normalArray = new struct vec3[nvert];
+
+	struct vec2 {
+		float u, v;
+	};
+	struct vec2 *textureArray;
+	textureArray = new struct vec2[nvert];
+	
+	for(int i = 0; i < ntri; ++i)	{
+		int z = i / (2*(w-1));
+		int x = (i % (2*(w-1)))/2;
+		int vx[3] = {x, x+(i&1), x+1}, vz[3] = {z+1, z+(i&1), z};
+		
+		int bv = i*3;
+		for(int j = 0; j < 3; ++j)	{
+			int v = bv + j;
+			vertexArray[v].x = vx[j];
+			vertexArray[v].y = heights[vx[j]][vz[j]];
+			vertexArray[v].z = vz[j];
+			
+			textureArray[v].u = vertexArray[v].x / w;
+			textureArray[v].v = vertexArray[v].z / h;
+			
+			normalArray[v].x = normals[vx[j]][vz[j]][0];
+			normalArray[v].y = normals[vx[j]][vz[j]][1];
+			normalArray[v].z = normals[vx[j]][vz[j]][2];
+		}
+	}
+	
+	glGenBuffers(1, &vertexVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
+	glBufferData(GL_ARRAY_BUFFER, nvert * 3 * sizeof(float), vertexArray, GL_STATIC_DRAW);
+
+	glGenBuffers(1, &textureVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, textureVBO);
+	glBufferData(GL_ARRAY_BUFFER, nvert * 2 * sizeof(float), textureArray, GL_STATIC_DRAW);
+	
+	glGenBuffers(1, &normalVBO);
+	glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
+	glBufferData(GL_ARRAY_BUFFER, nvert * 3 * sizeof(float), normalArray, GL_STATIC_DRAW);
+	
+	delete[] vertexArray;
+	delete[] normalArray;
+	delete[] textureArray;
+}
+
+void Terrain::render(GLfloat height, GLfloat size)	{
 	glPushMatrix();
 	glPushAttrib(GL_CURRENT_BIT);
 	
@@ -103,31 +159,31 @@ void Terrain::create(GLfloat height, GLfloat size)	{
                  - h / 2);
 	
 	if(texture)	{
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texture);
+		glBindBuffer(GL_ARRAY_BUFFER, textureVBO);
+		glTexCoordPointer(2, GL_FLOAT, 0, NULL);
 	}
-	else
-		glColor3f(0.3f, 0.3f, 0.3f);
 	
-    for(int z = 0; z < h - 1; z++) {
-        
-		glBegin(GL_TRIANGLE_STRIP);
-			for(int x = 0; x < w; x++) {
-				glm::vec3 normal = normals[x][z];
-				glNormal3f(normal[0], normal[1], normal[2]);
-				if(texture) glTexCoord2f((float)x/w, (float)z/h);
-				glVertex3f(x, heights[x][z], z);
-				
-				normal = normals[x][z + 1];
-				glNormal3f(normal[0], normal[1], normal[2]);
-				if(texture) glTexCoord2f((float)x/w, (float)(z+1)/h);
-				glVertex3f(x, heights[x][z + 1], z + 1);
-			}
-        glEnd();
-		
-    }
-	if(texture) glDisable(GL_TEXTURE_2D);
+	glEnableClientState(GL_NORMAL_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, normalVBO);
+	glNormalPointer(GL_FLOAT, 0, NULL);
 	
+	glEnableClientState(GL_VERTEX_ARRAY);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
+	glVertexPointer(3, GL_FLOAT, 0, NULL);
+	
+	glDrawArrays(GL_TRIANGLES, 0, nvert);
+	
+	glDisableClientState(GL_VERTEX_ARRAY);
+	glDisableClientState(GL_NORMAL_ARRAY);
+	if(texture)	{
+		glDisable(GL_TEXTURE_2D);
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+	}
+	
+	// TODO: Can we actually do away with per-vertex normals?
 	glPopAttrib();
 	glPopMatrix();
 }

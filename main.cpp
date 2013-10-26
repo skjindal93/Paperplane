@@ -323,10 +323,10 @@ void drawStatics()	{
 	
 	GLfloat size = 500.0f, height = 25.0f;
 	glTranslatef(0.0f, -50.0f, 0.0f);
-	for(int i = 0, p = -curZ/size; i < 2; ++i, ++p)	{
+	for(int i = 0, p = -curZ/size; i < 3; ++i, ++p)	{
 		glTranslatef(0.0f, 0.0f, -(size * p + size / 2)/2);
 		if(terr != NULL)
-			terr->create(height, size);
+			terr->render(height, size);
 	}
 	
 	glPopAttrib();
