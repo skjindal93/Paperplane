@@ -299,7 +299,25 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 		}
 	}
 	else	{
+		if(useTex)	{
+			glEnable(GL_TEXTURE_2D);
+			glBindTexture(GL_TEXTURE_2D, texture);
+		}
 		
+		int ntri = (int)triangles.size();
+		for(int i = 0; i < ntri; i++) {
+			
+			glBegin(GL_TRIANGLES);
+			for(int j = 0; j < 3; j++) {
+				int v = triangles[i].v[j], n = triangles[i].n[j], t = triangles[i].t[j];
+				glNormal3f(normals[n][0], normals[n][1], normals[n][2]);
+				if(texture) glTexCoord2f(uvs[t][0], uvs[t][1]);
+				glVertex3f(vertices[v][0], vertices[v][1], vertices[v][2]);
+			}
+			glEnd();
+			
+		}
+		if(texture) glDisable(GL_TEXTURE_2D);
 	}
 	
 	glPopAttrib();
