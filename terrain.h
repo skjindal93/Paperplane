@@ -14,10 +14,9 @@
 class Terrain {
 public:
 	int w, h, nvert, ntri;
-	GLuint texture;
+	GLuint texture, vertexVBO, textureVBO, normalVBO;
 	float** heights;
 	glm::vec3** normals;
-	unsigned int vertexVBO, textureVBO, normalVBO;
 
 	Terrain(Image* hmap, const char* texture = NULL);
 	void computeNormals();

@@ -16,6 +16,7 @@
 #include <cstring>
 #include <cmath>
 #include <algorithm>
+#include <vector>
 #include <ctime>
 #include <cstdarg>
 #include <iostream>
@@ -40,5 +41,6 @@ using namespace std;
 /* Project Libraries */
 #include "ppm.h"
 #include "terrain.h"
+#include "object.h"
 
 #endif

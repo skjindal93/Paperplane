@@ -97,18 +97,12 @@ void Terrain::buildArrayBuffers()	{
 	ntri = (w-1)*(h-1)*2;
 	nvert = ntri*3;
 	
-	struct vec3 {
-		float x, y, z;
-	};
-	struct vec3 *vertexArray, *normalArray;
-	vertexArray = new struct vec3[nvert];
-	normalArray = new struct vec3[nvert];
+	glm::vec3 *vertexArray, *normalArray;
+	vertexArray = new glm::vec3[nvert];
+	normalArray = new glm::vec3[nvert];
 
-	struct vec2 {
-		float u, v;
-	};
-	struct vec2 *textureArray;
-	textureArray = new struct vec2[nvert];
+	glm::vec2 *textureArray;
+	textureArray = new glm::vec2[nvert];
 	
 	for(int i = 0; i < ntri; ++i)	{
 		int z = i / (2*(w-1));
@@ -122,8 +116,8 @@ void Terrain::buildArrayBuffers()	{
 			vertexArray[v].y = heights[vx[j]][vz[j]];
 			vertexArray[v].z = vz[j];
 			
-			textureArray[v].u = vertexArray[v].x / w;
-			textureArray[v].v = vertexArray[v].z / h;
+			textureArray[v].x = vertexArray[v].x / w;
+			textureArray[v].y = vertexArray[v].z / h;
 			
 			normalArray[v].x = normals[vx[j]][vz[j]][0];
 			normalArray[v].y = normals[vx[j]][vz[j]][1];
@@ -190,7 +184,14 @@ void Terrain::render(GLfloat height, GLfloat size)	{
 
 Terrain::~Terrain()	{
 	
-	glDeleteTextures( 1, &texture );
+	if(texture)
+		glDeleteTextures( 1, &texture );
+	if(textureVBO)
+		glDeleteBuffers(1, &textureVBO);
+	if(vertexVBO)
+		glDeleteBuffers(1, &vertexVBO);
+	if(normalVBO)
+		glDeleteBuffers(1, &normalVBO);
 	
 	for (int i = 0; i < w; ++i) {
 		delete[] heights[i];
