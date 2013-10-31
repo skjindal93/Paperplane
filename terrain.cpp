@@ -146,11 +146,9 @@ void Terrain::render(GLfloat height, GLfloat size)	{
 	glPushMatrix();
 	glPushAttrib(GL_CURRENT_BIT);
 	
+	glTranslatef(-size/2, 0.0f, size/2);
 	float scale = size / max(w - 1, h - 1);
     glScalef(scale, height, scale);
-    glTranslatef(- w / 2,
-                 0.0f,
-                 - h / 2);
 	
 	if(texture)	{
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);

@@ -25,6 +25,7 @@ glm::vec3 specular, diffuse, ambient;
 int t1, t2, frameCount;
 GLfloat fps;
 GLvoid *font_style;
+Object plane;
 
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -36,7 +37,7 @@ void initConstants()	{
 	center = glm::vec3(0.0f);
 	center[2] = -10.0f;
 	
-	step = 0.5;
+	step = 5.0;
 	slices = 150;
 	stacks = 100;
 	planeX = planeY = 0.0f;
@@ -149,9 +150,14 @@ void GLInit()	{
     glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
     glShadeModel(GL_SMOOTH); //Enable smooth shading
 	
+	cout << "Reading terrain..\n";
 	Image *img = readP6(terr_heightmap);
 	if(img != NULL)
 		terr = new Terrain(img, terr_texture);
+	cout << "Terrain loaded!\n";
+	
+	plane = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/plane.obj"))[0];
+	plane.load();
 }
 
 // glut's window resize function
@@ -263,55 +269,8 @@ void drawPlane()	{
 	glPushMatrix();
 	glPushAttrib(GL_CURRENT_BIT);
 	
-	GLfloat dimX = 2.0f, dimY = 1.0f, dimZ = -5.0f;
-
-	dimX /= 2;
-	dimY /= 2;
-	
-	glTranslatef(planeX, planeY, 0.0f);
-	
-	glBegin(GL_QUADS);
-		glColor3f(0.1f, 0.2f, 0.7f);
-		
-		// Counter-clockwise order, normal pointing out
-		
-		// Back Face
-		glVertex3f(-dimX, dimY, 0.0f);
-		glVertex3f(-dimX, -dimY, 0.0f);
-		glVertex3f(dimX, -dimY, 0.0f);
-		glVertex3f(dimX, dimY, 0.0f);
-
-		// Bottom Face
-		glVertex3f(-dimX, -dimY, 0.0f);
-		glVertex3f(-dimX, -dimY, dimZ);
-		glVertex3f(dimX, -dimY, dimZ);
-		glVertex3f(dimX, -dimY, 0.0f);
-		
-		// Left Face
-		glVertex3f(-dimX, dimY, 0.0f);
-		glVertex3f(-dimX, dimY, dimZ);
-		glVertex3f(-dimX, -dimY, dimZ);
-		glVertex3f(-dimX, -dimY, 0.0f);
-		
-		// Right Face
-		glVertex3f(dimX, dimY, 0.0f);
-		glVertex3f(dimX, -dimY, 0.0f);
-		glVertex3f(dimX, -dimY, dimZ);
-		glVertex3f(dimX, dimY, dimZ);
-		
-		// Front Face
-		glVertex3f(-dimX, dimY, dimZ);
-		glVertex3f(dimX, dimY, dimZ);
-		glVertex3f(dimX, -dimY, dimZ);
-		glVertex3f(-dimX, -dimY, dimZ);
-		
-		// Top Face
-		glVertex3f(-dimX, dimY, 0.0f);
-		glVertex3f(-dimX, dimY, dimZ);
-		glVertex3f(dimX, dimY, dimZ);
-		glVertex3f(dimX, dimY, 0.0f);
-	
-	glEnd();
+	glTranslatef(planeX, planeY, -5.0f);
+	plane.render(0.6f, 0.6f, -0.6f);
 	
 	glPopAttrib();
 	glPopMatrix();
@@ -321,12 +280,13 @@ void drawStatics()	{
 	glPushMatrix();
 	glPushAttrib(GL_CURRENT_BIT);
 	
-	GLfloat size = 500.0f, height = 25.0f;
-	glTranslatef(0.0f, -50.0f, 0.0f);
-	for(int i = 0, p = -curZ/size; i < 3; ++i, ++p)	{
-		glTranslatef(0.0f, 0.0f, -(size * p + size / 2)/2);
+	GLfloat size = 300.0f, height = 50.0f;
+	int p = -curZ/size;
+	glTranslatef(0.0f, -50.0f, -(size * p - size/2));
+	for(int i = 0; i < 3; ++i)	{
 		if(terr != NULL)
-			terr->render(height, size);
+			terr->render(height, -size);
+		glTranslatef(0.0f, 0.0f, -size);
 	}
 	
 	glPopAttrib();

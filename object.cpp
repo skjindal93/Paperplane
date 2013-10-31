@@ -62,6 +62,7 @@ vector<Material>* readMTL(const char* file)	{
 				if(cur)
 					materials->push_back(*cur);
 				cur = new Material();
+				fscanf(mtl, "%*[ ]");
 				fscanf(mtl, "%31[^\n]", cur->name);
 				
 			} else if (!strcmp(type, "Ns"))	{
@@ -94,7 +95,7 @@ Object::Object()	{
 	uvs.clear();
 	triangles.clear();
 	mtl = NULL;
-	name = NULL;
+	name = new char[32];
 }
 
 Object::~Object()	{
@@ -102,6 +103,7 @@ Object::~Object()	{
 		unload();
 	if(texture)
 		glDeleteTextures( 1, &texture );
+	delete[] name;
 }
 
 vector<Object>* readOBJ(const char* file)	{
@@ -123,14 +125,17 @@ vector<Object>* readOBJ(const char* file)	{
 			
 			if (!strcmp(type, "mtllib"))	{
 				
-				fscanf(obj, "%31[^\n]", type);
-				mtllib = readMTL(type);
+				fscanf(obj, "%*[ ]");
+				char buffer[1000];
+				fscanf(obj, "%255[^\n]", buffer);
+				mtllib = readMTL(buffer);
 				
 			} else if (!strcmp(type, "o"))	{
 				
 				if(cur)
 					objects->push_back(*cur);
 				cur = new Object();
+				fscanf(obj, "%*[ ]");
 				fscanf(obj, "%31[^\n]", cur->name);
 				
 			} else if (!strcmp(type, "usemtl"))	{
@@ -144,8 +149,10 @@ vector<Object>* readOBJ(const char* file)	{
 				
 			} else if (!strcmp(type, "usetex"))	{
 				
-				fscanf(obj, "%31[^\n]", type);
-				cur->texture = loadTexture(type);
+				fscanf(obj, "%*[ ]");
+				char buffer[1000];
+				fscanf(obj, "%255[^\n]", buffer);
+				cur->texture = loadTexture(buffer);
 				
 			} else if (!strcmp(type, "v"))	{
 
@@ -172,18 +179,32 @@ vector<Object>* readOBJ(const char* file)	{
 				triangle tri;
 				if (cur->useTex && cur->useNormal)	{
 					int r = fscanf(obj, "%d/%d/%d %d/%d/%d %d/%d/%d", &tri.v[0], &tri.t[0], &tri.n[0], &tri.v[1], &tri.t[1], &tri.n[1], &tri.v[2], &tri.t[2], &tri.n[2]);
+					
+					tri.v -= 1;
+					tri.n -= 1;
+					tri.t -= 1;
+					
 					if(r == 9)
 						cur->triangles.push_back(tri);
 				} else if (cur->useNormal)	{
 					int r = fscanf(obj, "%d//%d %d//%d %d//%d", &tri.v[0], &tri.n[0], &tri.v[1], &tri.n[1], &tri.v[2], &tri.n[2]);
+					
+					tri.v -= 1;
+					tri.n -= 1;
+					
 					if(r == 6)
 						cur->triangles.push_back(tri);
 				} else if (cur->useTex)	{
 					int r = fscanf(obj, "%d/%d/ %d/%d/ %d/%d/", &tri.v[0], &tri.t[0], &tri.v[1], &tri.t[1], &tri.v[2], &tri.t[2]);
+					
+					tri.v -= 1;
+					tri.t -= 1;
+					
 					if(r == 6)
 						cur->triangles.push_back(tri);
 				} else	{
 					int r = fscanf(obj, "%d// %d// %d//", &tri.v[0], &tri.v[1], &tri.v[2]);
+					tri.v -= 1;
 					if(r == 3)
 						cur->triangles.push_back(tri);
 				}
