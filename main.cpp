@@ -404,8 +404,8 @@ int main(int argc, char * argv[])		{
 	initConstants();
 	
 #pragma GCC diagnostic ignored "-Wwrite-strings"
-	terr_heightmap = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.world.540x270.ppm";
-	terr_texture = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.world.540x270.ppm";
+	terr_heightmap = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.desert.ppm";
+	terr_texture = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.desert.ppm";
 
 	// Initialize OpenGL.
 	GLInit();
