@@ -17,7 +17,7 @@ double randf()	{
 //////////////////////// Constants //////////////////////////
 /////////////////////////////////////////////////////////////
 
-GLint run, winW, winH, keyModifiers;
+GLint run, winW, winH, wLo, wHi, hLo, hHi, keyModifiers;
 glm::vec3 eye, up, center;
 GLfloat step, zoom;
 GLUquadricObj* myQuadric = 0;
@@ -71,9 +71,9 @@ void initConstants()	{
 	stargap = 50.0f;
 	maxX = 10.0f;
 	maxY = 12.0f;
-	stars[0] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f, 1.0f);
-	stars[1] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-stargap, 1.0f);
-	stars[2] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-2*stargap, 1.0f);
+	stars[0] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f, randf());
+	stars[1] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-stargap, randf());
+	stars[2] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-2*stargap, randf());
 	
 	score = xold = yold = vx = vy = hovered = 0;
 }
@@ -124,6 +124,12 @@ void GLInit()	{
     glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
     glShadeModel(GL_SMOOTH); //Enable smooth shading
 	
+	glEnable(GL_FOG);
+	glHint(GL_FOG_HINT, GL_FASTEST);
+	glFogi(GL_FOG_MODE, GL_EXP2);
+	glFogfv(GL_FOG_COLOR, glm::value_ptr(glm::vec4(glm::vec3(0.98f), 1.0f)));
+	glFogf(GL_FOG_DENSITY, 0.00175f);
+	
 	cout << "Reading terrain..\n";
 	Image *img = readP6("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.desert.ppm");
 	if(img != NULL)
@@ -144,15 +150,23 @@ void GLInit()	{
 void resizeWindow(int w, int h)	{
 	winW = w;
 	winH = h;
+	
+	// Let's not change our view for different window sizes.
+	int small = min(w,h);
+	wLo = (w-small)/2;
+	hLo = (h-small)/2;
+	wHi = small + wLo;
+	hHi = small + hLo;
+	
 	//Tell OpenGL how to convert from coordinates to pixel values
-	glViewport(0, 0, w, h);
+	glViewport(wLo, hLo, wHi - wLo, hHi - hLo);
 	
 	glMatrixMode(GL_PROJECTION); //Switch to setting the camera perspective
 	
 	//Set the camera perspective
 	glLoadIdentity(); //Reset the camera
 	gluPerspective(65.0f*zoom,            // FOV
-				   (double)w / (double)h, // Aspect
+				   1.0f, //(double)w / (double)h, // Aspect
 				   0.0001,                // near-clipping
 				   2000.0);               // far-clipping
 	
@@ -168,12 +182,6 @@ void resizeWindow(int w, int h)	{
 
 void keyboardFunc(unsigned char key, int x, int y)	{
 	keyModifiers = glutGetModifiers();
-	
-//	glm::vec3 dir = glm::vec3(center[0] - eye[0], center[1] - eye[1], center[2] - eye[2]);
-//	glm::normalize(dir);
-//	glm::vec3 right = glm::cross(dir, up);
-//	glm::normalize(right);
-	
 	switch (key) {
 		case 'r':
 		case 'R':
@@ -197,12 +205,9 @@ void specialKeys(int k, int x, int y)	{
 
 void hoverFunc(int x, int y)	{
 	hovered = 1;
-	
-	x += winW/6.0f;
-	y += winH/6.0f;
-	
-	GLint w = 8.0f * winW / 6.0f;
-	GLint h = 8.0f * winH / 6.0f;
+
+	GLint w = wHi - wLo;
+	GLint h = hHi - hLo;
 	
 	x = min(max(0, x), w);
 	y = min(max(0, y), h);
@@ -268,7 +273,7 @@ void drawStatics()	{
 	glTranslatef(0.0f, -30.0f, -(size * p - size/2));
 
 	terrMaterial.enable();
-	for(int i = 0; i < 3; ++i)	{
+	for(int i = 0; i < 4; ++i)	{
 		if(terr != NULL)
 			terr->render(height, -size);
 		glTranslatef(0.0f, 0.0f, -size);
@@ -284,12 +289,12 @@ void drawStatics()	{
 			stars[i][0] = maxX * (randf() - 0.5);
 			stars[i][1] = maxY * (randf() - 0.5);
 			stars[i][2] -= stargap*3;
-			stars[i][3] = 1.0f;
+			stars[i][3] = randf();
 		}
-		if(stars[i][3] > 0.0f)	{
+		if(stars[i][3] >= 0.0f)	{
 
 			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
-			drawStar();
+			drawStar(stars[i][3]);
 			glTranslatef(-stars[i][0], -stars[i][1], -stars[i][2]);
 			
 			if(fabs(planeX - stars[i][0]) < 2.0f && fabs(planeY - stars[i][1]) < 2.0f && fabs(curZ - 5.0f - stars[i][2]) < 1.0f)	{
@@ -311,11 +316,11 @@ void drawMoving()	{
 	glPopMatrix();
 	glPushMatrix();
 	
-	
 	// Background Texture
 	
 	glTranslatef(0.0f, 350.0f, -1000.0f);
 	glScalef(700.0f, 700.0f, 1.0f);
+
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, bgTex);
 	
