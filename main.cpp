@@ -9,6 +9,10 @@
 #include "paperplane.h"
 
 
+double randf()	{
+	return (double)rand() / (double)RAND_MAX;
+}
+
 /////////////////////////////////////////////////////////////
 //////////////////////// Constants //////////////////////////
 /////////////////////////////////////////////////////////////
@@ -20,12 +24,17 @@ GLUquadricObj* myQuadric = 0;
 GLint slices, stacks;
 GLfloat planeX, planeY, curZ;
 Terrain *terr;
-char *terr_heightmap, *terr_texture;
 glm::vec3 specular, diffuse, ambient;
-int t1, t2, frameCount;
+int t1, t2, frameCount, lastCount;
 GLfloat fps;
 GLvoid *font_style;
-Object plane;
+Object plane, star;
+Material terrMaterial;
+GLuint bgTex;
+glm::vec4 stars[3];
+GLfloat stargap;
+int score, xold, yold, vx, vy;
+int maxX, maxY, hovered;
 
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -37,7 +46,7 @@ void initConstants()	{
 	center = glm::vec3(0.0f);
 	center[2] = -10.0f;
 	
-	step = 5.0;
+	step = 0.8f;
 	slices = 150;
 	stacks = 100;
 	planeX = planeY = 0.0f;
@@ -51,59 +60,23 @@ void initConstants()	{
 	font_style = GLUT_BITMAP_HELVETICA_12;
 	
 	t1 = glutGet(GLUT_ELAPSED_TIME);
-	frameCount = 0;
+	frameCount = lastCount = 0;
 	fps = 0.0f;
 	
-	glutPostRedisplay();
+	terrMaterial.Ka = glm::vec3(0.7f);
+	terrMaterial.Kd = glm::vec3(0.7f);
+	terrMaterial.Ks = glm::vec3(0.8f);
+	terrMaterial.s = 100.0f;
+	
+	stargap = 50.0f;
+	maxX = 10.0f;
+	maxY = 12.0f;
+	stars[0] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f, 1.0f);
+	stars[1] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-stargap, 1.0f);
+	stars[2] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-2*stargap, 1.0f);
+	
+	score = xold = yold = vx = vy = hovered = 0;
 }
-
-//int _vscprintf (const char * format, va_list pargs) {
-//	int retval;
-//	va_list argcopy;
-//	va_copy(argcopy, pargs);
-//	retval = vsnprintf(NULL, 0, format, pargs);
-//	va_end(argcopy);
-//	return retval;
-//}
-//
-////-------------------------------------------------------------------------
-////  Draws a string at the specified coordinates.
-////-------------------------------------------------------------------------
-//void printw (float x, float y, float z, char* format, ...)
-//{
-//    va_list args;   //  Variable argument list
-//    int len;        // String length
-//    int i;          //  Iterator
-//    char * text;    // Text
-//	
-//    //  Initialize a variable argument list
-//    va_start(args, format);
-//	
-//    //  Return the number of characters in the string referenced the list of arguments.
-//    // _vscprintf doesn't count terminating '\0' (that's why +1)
-//    len = _vscprintf(format, args) + 1;
-//	
-//    //  Allocate memory for a string of the specified size
-//    text = new char[len];
-//	
-//    //  Write formatted output using a pointer to the list of arguments
-//	vsprintf(text, format, args);
-//	//    vsprintf(text, len, format, args);
-//	
-//    //  End using variable argument list
-//    va_end(args);
-//	
-//    //  Specify the raster position for pixel operations.
-//    glRasterPos3f (x, y, z);
-//	
-//    //  Draw the characters one by one
-//    for (i = 0; text[i] != '\0'; i++)
-//		glutBitmapCharacter(font_style, text[i]);
-//	
-//    //  Free the allocated memory for the string
-//	delete[] text;
-//}
-
 
 /////////////////////////////////////////////////////////////
 ////////////////////// GL Init, Resize //////////////////////
@@ -112,6 +85,7 @@ void initConstants()	{
 // Initialize OpenGL's rendering modes
 void GLInit()	{
 	
+	srand((unsigned)time(NULL));
 	glEnable ( GL_DEPTH_TEST );
 	myQuadric = gluNewQuadric();
 	gluQuadricNormals( myQuadric, GL_TRUE );
@@ -151,13 +125,18 @@ void GLInit()	{
     glShadeModel(GL_SMOOTH); //Enable smooth shading
 	
 	cout << "Reading terrain..\n";
-	Image *img = readP6(terr_heightmap);
+	Image *img = readP6("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.desert.ppm");
 	if(img != NULL)
-		terr = new Terrain(img, terr_texture);
+		terr = new Terrain(img, "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.desert.ppm");
 	cout << "Terrain loaded!\n";
 	
 	plane = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/plane.obj"))[0];
 	plane.load();
+	
+	star = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/star.obj"))[0];
+	star.load();
+	
+	bgTex = loadTexture("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/bg.sky.ppm");
 }
 
 // glut's window resize function
@@ -195,8 +174,6 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 //	glm::vec3 right = glm::cross(dir, up);
 //	glm::normalize(right);
 	
-	glutPostRedisplay();
-	
 	switch (key) {
 		case 'r':
 		case 'R':
@@ -216,13 +193,11 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 
 void specialKeys(int k, int x, int y)	{
 	keyModifiers = glutGetModifiers();
-	glutPostRedisplay();
 }
 
-int xold, yold;
-
 void hoverFunc(int x, int y)	{
-
+	hovered = 1;
+	
 	x += winW/6.0f;
 	y += winH/6.0f;
 	
@@ -232,28 +207,24 @@ void hoverFunc(int x, int y)	{
 	x = min(max(0, x), w);
 	y = min(max(0, y), h);
 	
-	GLfloat dx = 10.0f*((float)x/w - 0.5f), dy = -10.0f*((float)y/h - 0.5f);
+	GLfloat dx = maxX *((float)x/w - 0.5f), dy = -maxY *((float)y/h - 0.5f);
 	planeX = dx;
 	planeY = dy;
 	
 	center[0] = eye[0] = dx/2.5f;
 	center[1] = eye[1] = dy/2.5f;
 	
-	// TODO: up vector.
-	// When plane goes left or right, make up vector incline towards the center.
-	
+	vx = 0.2 * (xold - x) + 0.8 * vx;
+	vy = 0.2 * (yold - y) + 0.8 * vy;
 	xold = x;
 	yold = y;
-	glutPostRedisplay();
 }
 
 void clickFunc(int button, int state, int x, int y)	{
 	keyModifiers = glutGetModifiers();
-	glutPostRedisplay();
 }
 
 void dragFunc(int x, int y)	{
-	glutPostRedisplay();
 	//pan(x,y);
 }
 
@@ -267,40 +238,113 @@ void dragFunc(int x, int y)	{
 
 void drawPlane()	{
 	glPushMatrix();
-	glPushAttrib(GL_CURRENT_BIT);
 	
 	glTranslatef(planeX, planeY, -5.0f);
-	plane.render(0.6f, 0.6f, -0.6f);
+	glRotatef(vx, 0.0f, 0.0f, 1.0f);
+	glRotatef(10.0f, 1.0f, 0.0f, 0.0f);
+	plane.render(0.5f, 0.3f, -0.9f);
 	
-	glPopAttrib();
+	glPopMatrix();
+}
+
+void drawStar(float rotOffset = 0.0f)	{
+	glPushMatrix();
+
+	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+	glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
+	glRotatef(360.0f*((double)((frameCount/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
+	glScalef(0.5f, 0.75f, 0.5f);
+	star.render();
+	
 	glPopMatrix();
 }
 
 void drawStatics()	{
 	glPushMatrix();
-	glPushAttrib(GL_CURRENT_BIT);
 	
+	// Endless Terrain
 	GLfloat size = 300.0f, height = 50.0f;
 	int p = -curZ/size;
-	glTranslatef(0.0f, -50.0f, -(size * p - size/2));
+	glTranslatef(0.0f, -30.0f, -(size * p - size/2));
+
+	terrMaterial.enable();
 	for(int i = 0; i < 3; ++i)	{
 		if(terr != NULL)
 			terr->render(height, -size);
 		glTranslatef(0.0f, 0.0f, -size);
 	}
+	terrMaterial.disable();
 	
-	glPopAttrib();
+	glPopMatrix();
+	glPushMatrix();
+	
+	// Stars
+	for(int i = 0; i < 3; ++i)	{
+		if(stars[i][2] > curZ)	{
+			stars[i][0] = maxX * (randf() - 0.5);
+			stars[i][1] = maxY * (randf() - 0.5);
+			stars[i][2] -= stargap*3;
+			stars[i][3] = 1.0f;
+		}
+		if(stars[i][3] > 0.0f)	{
+
+			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
+			drawStar();
+			glTranslatef(-stars[i][0], -stars[i][1], -stars[i][2]);
+			
+			if(fabs(planeX - stars[i][0]) < 2.0f && fabs(planeY - stars[i][1]) < 2.0f && fabs(curZ - 5.0f - stars[i][2]) < 1.0f)	{
+				score ++;
+				stars[i][3] = -1.0f;
+			}
+		}
+	}
+	
 	glPopMatrix();
 }
 
 void drawMoving()	{
-	glPushMatrix();
 	glPushAttrib(GL_CURRENT_BIT);
+	glPushMatrix();
 	
 	drawPlane();
 	
-	glPopAttrib();
 	glPopMatrix();
+	glPushMatrix();
+	
+	
+	// Background Texture
+	
+	glTranslatef(0.0f, 350.0f, -1000.0f);
+	glScalef(700.0f, 700.0f, 1.0f);
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, bgTex);
+	
+	glBegin(GL_TRIANGLES);
+	
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+	
+	glTexCoord2f(1.0f, 1.0f);
+	glVertex3f(1.0f, -1.0f, 0.0f);
+	
+	glTexCoord2f(1.0f, -1.0f);
+	glVertex3f(1.0f, 1.0f, 0.0f);
+	
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+	
+	glTexCoord2f(0.0f, -1.0f);
+	glVertex3f(-1.0f, 1.0f, 0.0f);
+	
+	glTexCoord2f(1.0f, -1.0f);
+	glVertex3f(1.0f, 1.0f, 0.0f);
+	
+	glEnd();
+	
+	glDisable(GL_TEXTURE_2D);
+	
+	glPopMatrix();
+	glPopAttrib();
 }
 
 // glut's Main Display Function
@@ -310,9 +354,21 @@ void drawScene()	{
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
 	
+
+//	UP vector rotation. TODO: Turn on?
+//	glm::vec4 UP(0.0f, 1.0f, 0.0f, 1.0f);
+//	glm::mat4x4 rot(1.0f);
+//	rot = glm::rotate(rot, (float)pow(abs(vx), 0.6) * (vx < 0 ? 1.0f : -1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+//	UP = rot * UP;
+//	up[0] = UP[0];
+//	up[1] = UP[1];
+//	up[2] = UP[2];
+	
 	glm::normalize(up);
 	gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 	// Only now draw anything you want to.
+	
+	//glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 50.0f, curZ-20.0f)));
 	
 	drawStatics();
 	glTranslatef(0.0f, 0.0f, curZ);
@@ -325,14 +381,11 @@ void drawScene()	{
 	t2 = glutGet(GLUT_ELAPSED_TIME);
 	double dt = ((double)t2 - (double)t1) / (double)1000;
 	if(dt > 0.25)	{
-		fps = (double)frameCount/dt;
-		cout << fps << " FPS\n";
+		fps = (double)(frameCount - lastCount)/dt;
+		cout << fps << " FPS, Score: " << score << "\n";
 		t1 = glutGet(GLUT_ELAPSED_TIME);
-		frameCount = 0;
+		lastCount = frameCount;
 	}
-	
-	if(run)
-		glutPostRedisplay();
 	
 }
 
@@ -344,6 +397,12 @@ void iter(int dummy)	{
 	
 	eye[2] = curZ + 5.0f;
 	center[2] = curZ - 5.0f;
+	
+	if(!hovered)	{
+		vx *= 0.8;
+		vy *= 0.8;
+	}
+	hovered = 0;
 	
 	glutTimerFunc(1, iter, 0);
 }
@@ -362,10 +421,6 @@ int main(int argc, char * argv[])		{
 	
 	//initialize constants
 	initConstants();
-	
-#pragma GCC diagnostic ignored "-Wwrite-strings"
-	terr_heightmap = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.desert.ppm";
-	terr_texture = "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.desert.ppm";
 
 	// Initialize OpenGL.
 	GLInit();

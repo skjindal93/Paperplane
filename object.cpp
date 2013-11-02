@@ -11,6 +11,7 @@
 Material::Material()	{
 	s = 0.0f;
 	Ka = Kd = Ks = glm::vec3(1.0f);
+	Ke = glm::vec3(0.0f);
 	name = new char[32];
 }
 
@@ -32,6 +33,7 @@ void Material::apply()	{
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, glm::value_ptr(Kd));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, glm::value_ptr(Ks));
 	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, s);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, glm::value_ptr(Ke));
 }
 
 void Material::disable()	{
@@ -62,8 +64,7 @@ vector<Material>* readMTL(const char* file)	{
 				if(cur)
 					materials->push_back(*cur);
 				cur = new Material();
-				fscanf(mtl, "%*[ ]");
-				fscanf(mtl, "%31[^\n]", cur->name);
+				fscanf(mtl, "%*[ ]%31[^\n]", cur->name);
 				
 			} else if (!strcmp(type, "Ns"))	{
 				fscanf(mtl, "%f", &cur->s);
@@ -73,6 +74,8 @@ vector<Material>* readMTL(const char* file)	{
 				fscanf(mtl, "%f %f %f", &cur->Kd.x, &cur->Kd.y, &cur->Kd.z);
 			} else if (!strcmp(type, "Ks"))	{
 				fscanf(mtl, "%f %f %f", &cur->Ks.x, &cur->Ks.y, &cur->Ks.z);
+			} else if (!strcmp(type, "Ke"))	{
+				fscanf(mtl, "%f %f %f", &cur->Ke.x, &cur->Ke.y, &cur->Ke.z);
 			}
 			
 			fscanf(mtl, "%*[^\n]");		// skip the rest of the line
@@ -111,6 +114,11 @@ vector<Object>* readOBJ(const char* file)	{
 	objects = new vector<Object>();
 	Object *cur = NULL;
 	vector<Material> *mtllib;
+	string dir = file;
+	if(string::npos != dir.rfind('/'))
+		dir = dir.substr(0, dir.rfind('/')+1);
+	else
+		dir = "";
 	
 	// read file
 	FILE *obj = fopen(file, "r");
@@ -125,22 +133,20 @@ vector<Object>* readOBJ(const char* file)	{
 			
 			if (!strcmp(type, "mtllib"))	{
 				
-				fscanf(obj, "%*[ ]");
 				char buffer[1000];
-				fscanf(obj, "%255[^\n]", buffer);
-				mtllib = readMTL(buffer);
+				fscanf(obj, "%*[ ]%255[^\n]", buffer);
+				mtllib = readMTL((char*)dir.append(buffer).c_str());
 				
 			} else if (!strcmp(type, "o"))	{
 				
 				if(cur)
 					objects->push_back(*cur);
 				cur = new Object();
-				fscanf(obj, "%*[ ]");
-				fscanf(obj, "%31[^\n]", cur->name);
+				fscanf(obj, "%*[ ]%31[^\n]", cur->name);
 				
 			} else if (!strcmp(type, "usemtl"))	{
 				
-				fscanf(obj, "%31[^\n]", type);
+				fscanf(obj, "%*[ ]%31[^\n]", type);
 				for(vector<Material>::iterator it = mtllib->begin(); it != mtllib->end(); ++it)
 					if(!strcmp(it->name, type))	{
 						cur->mtl = &(*it);
@@ -149,9 +155,8 @@ vector<Object>* readOBJ(const char* file)	{
 				
 			} else if (!strcmp(type, "usetex"))	{
 				
-				fscanf(obj, "%*[ ]");
 				char buffer[1000];
-				fscanf(obj, "%255[^\n]", buffer);
+				fscanf(obj, "%*[ ]%255[^\n]", buffer);
 				cur->texture = loadTexture(buffer);
 				
 			} else if (!strcmp(type, "v"))	{
@@ -289,6 +294,9 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 	
     glScalef(scaleX, scaleY, scaleZ);
 	
+	if(mtl)
+		mtl->enable();
+	
 	if(loaded)	{
 		if(useTex)	{
 			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -340,6 +348,9 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 		}
 		if(texture) glDisable(GL_TEXTURE_2D);
 	}
+	
+	if(mtl)
+		mtl->disable();
 	
 	glPopAttrib();
 	glPopAttrib();

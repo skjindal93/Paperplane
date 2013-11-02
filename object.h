@@ -14,7 +14,7 @@
 class Material	{
 public:
 	GLfloat s;
-	glm::vec3 Ka, Kd, Ks;
+	glm::vec3 Ka, Kd, Ks, Ke;
 	char* name;
 	
 	Material();

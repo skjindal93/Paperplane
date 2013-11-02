@@ -1,0 +1,12 @@
+# Blender MTL File: 'Mirror.blend'
+# Material Count: 1
+
+newmtl GlowStar
+Ns 0.96078431
+Ka 0.000000 0.000000 0.000000
+Kd 0.799438 0.800000 0.073648
+Ks 1.000000 1.000000 1.000000
+Ke 1.0 1.0 1.0
+Ni 1.000000
+d 1.000000
+illum 2
