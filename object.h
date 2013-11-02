@@ -18,11 +18,7 @@ public:
 	char* name;
 	
 	Material();
-	
-	void enable();
 	void apply();
-	void disable();
-	
 	~Material();
 };
 

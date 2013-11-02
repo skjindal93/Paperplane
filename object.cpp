@@ -19,28 +19,12 @@ Material::~Material()	{
 	delete[] name;
 }
 
-void Material::enable()	{
-	glPushAttrib(GL_ENABLE_BIT);
-	glPushAttrib(GL_LIGHTING_BIT);
-	
-	glEnable(GL_COLOR_MATERIAL);
-	
-	apply();
-}
-
 void Material::apply()	{
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, glm::value_ptr(Ka));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, glm::value_ptr(Kd));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, glm::value_ptr(Ks));
 	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, s);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, glm::value_ptr(Ke));
-}
-
-void Material::disable()	{
-	glDisable(GL_COLOR_MATERIAL);
-	
-	glPopAttrib();
-	glPopAttrib();
 }
 
 vector<Material>* readMTL(const char* file)	{
@@ -295,7 +279,7 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
     glScalef(scaleX, scaleY, scaleZ);
 	
 	if(mtl)
-		mtl->enable();
+		mtl->apply();
 	
 	if(loaded)	{
 		if(useTex)	{
@@ -348,9 +332,6 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 		}
 		if(texture) glDisable(GL_TEXTURE_2D);
 	}
-	
-	if(mtl)
-		mtl->disable();
 	
 	glPopAttrib();
 	glPopAttrib();

@@ -95,14 +95,14 @@ void GLInit()	{
 	//	glPointSize(8);
 	//	glLineWidth(5);
     
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_LINE_SMOOTH);
-	//	glEnable(GL_POLYGON_SMOOTH_HINT);
-	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);    // Make round points, not square points
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
-												//	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
-												//	glEnable(GL_BLEND);
-												//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//	glEnable(GL_POINT_SMOOTH);
+//	glEnable(GL_LINE_SMOOTH);
+//	//	glEnable(GL_POLYGON_SMOOTH_HINT);
+//	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);    // Make round points, not square points
+//	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
+//												//	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
+//												//	glEnable(GL_BLEND);
+//												//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	glEnable(GL_MULTISAMPLE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
@@ -266,20 +266,21 @@ void drawStar(float rotOffset = 0.0f)	{
 
 void drawStatics()	{
 	glPushMatrix();
+	glPushAttrib(GL_LIGHTING_BIT);
 	
 	// Endless Terrain
 	GLfloat size = 300.0f, height = 50.0f;
 	int p = -curZ/size;
 	glTranslatef(0.0f, -30.0f, -(size * p - size/2));
 
-	terrMaterial.enable();
+	terrMaterial.apply();
 	for(int i = 0; i < 4; ++i)	{
 		if(terr != NULL)
 			terr->render(height, -size);
 		glTranslatef(0.0f, 0.0f, -size);
 	}
-	terrMaterial.disable();
 	
+	glPopAttrib();
 	glPopMatrix();
 	glPushMatrix();
 	
