@@ -47,7 +47,7 @@ void initConstants()	{
 	center = glm::vec3(0.0f);
 	center[2] = -10.0f;
 	
-	step = 0.8f;
+	step = 2.0f;
 	slices = 150;
 	stacks = 100;
 	planeX = planeY = 0.0f;
@@ -86,6 +86,7 @@ void GLInit()	{
 	
 	srand((unsigned)time(NULL));
 	glEnable ( GL_DEPTH_TEST );
+	glClear ( GL_ACCUM_BUFFER_BIT );
 	myQuadric = gluNewQuadric();
 	gluQuadricNormals( myQuadric, GL_TRUE );
 	gluQuadricOrientation(myQuadric, GLU_OUTSIDE);
@@ -179,6 +180,8 @@ void resizeWindow(int w, int h)	{
 /////////////// Keyboard and Mouse Functions ////////////////
 /////////////////////////////////////////////////////////////
 
+void iter(int);
+
 void keyboardFunc(unsigned char key, int x, int y)	{
 	keyModifiers = glutGetModifiers();
 	switch (key) {
@@ -190,6 +193,8 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 		
 		case ' ':
 			run ^= 1;
+			if(run)
+				glutTimerFunc(1, iter, 0);
 			break;
 			
 		case 27:                                    // "27" is theEscape key
@@ -314,12 +319,7 @@ void drawStatics()	{
 void drawMoving()	{
 	glPushAttrib(GL_CURRENT_BIT);
 	glPushMatrix();
-	
-	drawPlane();
-	
-	glPopMatrix();
-	glPushMatrix();
-	
+		
 	// Background Texture
 	
 	glTranslatef(0.0f, 350.0f, -1000.0f);
@@ -384,6 +384,14 @@ void drawScene()	{
 	//cout<<curZ<<endl;
 	drawMoving();
 	
+	glAccum(GL_MULT, 0.5);
+	glAccum(GL_ACCUM, 0.5);
+	glAccum(GL_RETURN, 1.0);
+	
+	
+	// Dont blur the plane!!
+	drawPlane();
+	
 	glutSwapBuffers();
 	frameCount++;
 	
@@ -413,13 +421,14 @@ void iter(int dummy)	{
 	}
 	hovered = 0;
 	
-	glutTimerFunc(1, iter, 0);
+	if(run)
+		glutTimerFunc(1, iter, 0);
 }
 
 int main(int argc, char * argv[])		{
 	// Need to double buffer for animation
 	glutInit(&argc,argv);
-	glutInitDisplayMode( GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_MULTISAMPLE);
+	glutInitDisplayMode( GLUT_ACCUM | GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_MULTISAMPLE);
 	
 	// Create and position the graphics window
 	glutInitWindowPosition( 100, 100 );
