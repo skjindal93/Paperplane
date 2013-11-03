@@ -123,7 +123,7 @@ void GLInit()	{
     glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
     glShadeModel(GL_SMOOTH); //Enable smooth shading
 	
-	glEnable(GL_FOG);
+	//glEnable(GL_FOG);
 	glHint(GL_FOG_HINT, GL_FASTEST);
 	glFogi(GL_FOG_MODE, GL_EXP2);
 	glFogfv(GL_FOG_COLOR, glm::value_ptr(glm::vec4(glm::vec3(0.8f), 1.0f)));
@@ -132,7 +132,7 @@ void GLInit()	{
 	cout << "Reading terrain..\n";
 	Image *img = readP6("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.desert.ppm");
 	if(img != NULL)
-		terr = new Terrain(img, "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.desert.ppm");
+		terr = new Terrain(img, "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.desert.ppm", 10);
 	cout << "Terrain loaded!\n";
 	
 	plane = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/plane.obj"))[0];
@@ -281,7 +281,7 @@ void drawStatics()	{
 	terrMaterial.apply();
 	
 	if(terr != NULL)
-		terr->render(height, -size, starting, 2.25f);
+		terr->render(height, -size, starting, 3.5f);
 	
 	glPopAttrib();
 	glPopMatrix();

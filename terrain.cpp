@@ -8,7 +8,7 @@
 
 #include "paperplane.h"
 
-Terrain::Terrain(Image* img, const char* texFile)	{
+Terrain::Terrain(Image* img, const char* texFile, int lod)	{
     w = img->w;
 	h = img->h;
 	
@@ -30,6 +30,7 @@ Terrain::Terrain(Image* img, const char* texFile)	{
 	if(texFile)
 		texture = loadTexture(texFile);
 	
+	this->lod = lod;
 	buildArrayBuffers();
 }
 
@@ -94,7 +95,7 @@ void Terrain::computeNormals()	{
 }
 
 void Terrain::buildArrayBuffers()	{
-	ntri = (w-1)*(h-1)*2;
+	ntri = (w/lod-1) * (h/lod-1) * 2;
 	nvert = ntri*3;
 	
 	glm::vec3 *vertexArray, *normalArray;
@@ -105,9 +106,11 @@ void Terrain::buildArrayBuffers()	{
 	textureArray = new glm::vec2[nvert];
 	
 	for(int i = 0; i < ntri; ++i)	{
-		int z = i / (2*(w-1));
-		int x = (i % (2*(w-1)))/2;
-		int vx[3] = {x, x+(i&1), x+1}, vz[3] = {z+1, z+(i&1), z};
+		int z = i / (2*(w/lod - 1));
+		int x = (i % (2*(w/lod - 1)))/2;
+		glm::ivec3 vx(x, x + (i&1), x+1), vz(z+1, z+(i&1), z);
+		vx *= lod;
+		vz *= lod;
 		
 		int bv = i*3;
 		for(int j = 0; j < 3; ++j)	{
@@ -119,9 +122,7 @@ void Terrain::buildArrayBuffers()	{
 			textureArray[v].x = vertexArray[v].x / w;
 			textureArray[v].y = vertexArray[v].z / h;
 			
-			normalArray[v].x = normals[vx[j]][vz[j]][0];
-			normalArray[v].y = normals[vx[j]][vz[j]][1];
-			normalArray[v].z = normals[vx[j]][vz[j]][2];
+			normalArray[v] = normals[vx[j]][vz[j]];
 		}
 	}
 	
@@ -147,7 +148,7 @@ void Terrain::render(GLfloat height, GLfloat size, GLfloat starting, GLfloat fra
 	glPushAttrib(GL_CURRENT_BIT);
 	
 	glTranslatef(-size/2, 0.0f, 0.0f);
-	float scale = size / max(w - 1, h - 1);
+	float scale = size / max(lod * (w/lod - 1), lod * (h/lod - 1));
     glScalef(scale, height, scale);
 	
 	if(texture)	{
@@ -211,3 +212,15 @@ Terrain::~Terrain()	{
 	delete[] normals;
 }
 
+void Terrain::setLOD(int LOD)	{
+	lod = LOD;
+	
+	if(textureVBO)
+		glDeleteBuffers(1, &textureVBO);
+	if(vertexVBO)
+		glDeleteBuffers(1, &vertexVBO);
+	if(normalVBO)
+		glDeleteBuffers(1, &normalVBO);
+	
+	buildArrayBuffers();
+}

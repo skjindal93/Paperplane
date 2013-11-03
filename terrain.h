@@ -13,15 +13,16 @@
 
 class Terrain {
 public:
-	int w, h, nvert, ntri;
+	int w, h, nvert, ntri, lod;
 	GLuint texture, vertexVBO, textureVBO, normalVBO;
 	float** heights;
 	glm::vec3** normals;
 
-	Terrain(Image* hmap, const char* texture = NULL);
+	Terrain(Image* hmap, const char* texture = NULL, int lod = 1);
 	void computeNormals();
 	void render(GLfloat height, GLfloat size, GLfloat starting = 0, GLfloat fraction = 1.0f);
 	void buildArrayBuffers();
+	void setLOD(int LOD);
 	
 	~Terrain();
 };
