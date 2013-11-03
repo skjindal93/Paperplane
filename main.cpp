@@ -31,7 +31,8 @@ GLvoid *font_style;
 Object plane, star;
 Material terrMaterial;
 GLuint bgTex;
-glm::vec4 stars[3];
+#define STAR_COUNT 7
+glm::vec4 stars[STAR_COUNT];
 GLfloat stargap;
 int score, xold, yold, vx, vy;
 int maxX, maxY, hovered;
@@ -71,10 +72,8 @@ void initConstants()	{
 	stargap = 50.0f;
 	maxX = 10.0f;
 	maxY = 12.0f;
-	stars[0] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f, randf());
-	stars[1] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-stargap, randf());
-	stars[2] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f-2*stargap, randf());
-	
+	for(int i = 0; i < STAR_COUNT; ++i)
+		stars[i] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f - i * stargap, randf());
 	score = xold = yold = vx = vy = hovered = 0;
 }
 
@@ -127,8 +126,8 @@ void GLInit()	{
 	glEnable(GL_FOG);
 	glHint(GL_FOG_HINT, GL_FASTEST);
 	glFogi(GL_FOG_MODE, GL_EXP2);
-	glFogfv(GL_FOG_COLOR, glm::value_ptr(glm::vec4(glm::vec3(0.98f), 1.0f)));
-	glFogf(GL_FOG_DENSITY, 0.00175f);
+	glFogfv(GL_FOG_COLOR, glm::value_ptr(glm::vec4(glm::vec3(0.8f), 1.0f)));
+	glFogf(GL_FOG_DENSITY, 0.002f);
 	
 	cout << "Reading terrain..\n";
 	Image *img = readP6("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.desert.ppm");
@@ -209,6 +208,8 @@ void hoverFunc(int x, int y)	{
 	GLint w = wHi - wLo;
 	GLint h = hHi - hLo;
 	
+	x -= wLo;
+	y -= hLo;
 	x = min(max(0, x), w);
 	y = min(max(0, y), h);
 	
@@ -269,27 +270,29 @@ void drawStatics()	{
 	glPushAttrib(GL_LIGHTING_BIT);
 	
 	// Endless Terrain
+	
 	GLfloat size = 300.0f, height = 50.0f;
 	int p = -curZ/size;
-	glTranslatef(0.0f, -30.0f, -(size * p - size/2));
+	glTranslatef(0.0f, -30.0f, -(size * p));
+	
+	// What fraction of terrain are we currently on
+	float starting = (-curZ - size * p) / size;
 
 	terrMaterial.apply();
-	for(int i = 0; i < 4; ++i)	{
-		if(terr != NULL)
-			terr->render(height, -size);
-		glTranslatef(0.0f, 0.0f, -size);
-	}
+	
+	if(terr != NULL)
+		terr->render(height, -size, starting, 2.25f);
 	
 	glPopAttrib();
 	glPopMatrix();
 	glPushMatrix();
 	
 	// Stars
-	for(int i = 0; i < 3; ++i)	{
+	for(int i = 0; i < STAR_COUNT; ++i)	{
 		if(stars[i][2] > curZ)	{
 			stars[i][0] = maxX * (randf() - 0.5);
 			stars[i][1] = maxY * (randf() - 0.5);
-			stars[i][2] -= stargap*3;
+			stars[i][2] -= stargap * STAR_COUNT;
 			stars[i][3] = randf();
 		}
 		if(stars[i][3] >= 0.0f)	{

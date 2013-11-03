@@ -142,11 +142,11 @@ void Terrain::buildArrayBuffers()	{
 	delete[] textureArray;
 }
 
-void Terrain::render(GLfloat height, GLfloat size)	{
+void Terrain::render(GLfloat height, GLfloat size, GLfloat starting, GLfloat fraction)	{
 	glPushMatrix();
 	glPushAttrib(GL_CURRENT_BIT);
 	
-	glTranslatef(-size/2, 0.0f, size/2);
+	glTranslatef(-size/2, 0.0f, 0.0f);
 	float scale = size / max(w - 1, h - 1);
     glScalef(scale, height, scale);
 	
@@ -166,7 +166,19 @@ void Terrain::render(GLfloat height, GLfloat size)	{
 	glBindBuffer(GL_ARRAY_BUFFER, vertexVBO);
 	glVertexPointer(3, GL_FLOAT, 0, NULL);
 	
-	glDrawArrays(GL_TRIANGLES, 0, nvert);
+	while(fraction > 0.0f)	{
+		
+		// Display terrain starting at starting% and fraction% of the total.
+		// {(nvert*starting) - (nvert*starting) % 3} because we must start at a multiple of 3
+		glDrawArrays( GL_TRIANGLES,
+					  3 * ((int)(nvert * starting) / 3),
+					  3 * ((int)(nvert * min(fraction, 1.0f - starting)) / 3));
+		
+		glTranslatef(0.0f, 0.0f, size / scale);
+		fraction -= 1.0f - starting;
+		starting = 0.0f;
+		
+	}
 	
 	glDisableClientState(GL_VERTEX_ARRAY);
 	glDisableClientState(GL_NORMAL_ARRAY);

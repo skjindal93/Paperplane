@@ -20,7 +20,7 @@ public:
 
 	Terrain(Image* hmap, const char* texture = NULL);
 	void computeNormals();
-	void render(GLfloat height, GLfloat size);
+	void render(GLfloat height, GLfloat size, GLfloat starting = 0, GLfloat fraction = 1.0f);
 	void buildArrayBuffers();
 	
 	~Terrain();
