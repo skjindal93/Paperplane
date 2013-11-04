@@ -107,6 +107,8 @@ void GLInit()	{
 	glEnable(GL_MULTISAMPLE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to white
+	
 	glEnable(GL_LIGHTING); //Enable lighting
 	
 	glEnable(GL_LIGHT0); //Enable light #0
@@ -358,7 +360,6 @@ void drawMoving()	{
 
 // glut's Main Display Function
 void drawScene()	{
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to white
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the rendering window
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
@@ -383,14 +384,28 @@ void drawScene()	{
 	glTranslatef(0.0f, 0.0f, curZ);
 	//cout<<curZ<<endl;
 	drawMoving();
-	
+
 	glAccum(GL_MULT, 0.5);
 	glAccum(GL_ACCUM, 0.5);
 	glAccum(GL_RETURN, 1.0);
 	
-	
-	// Dont blur the plane!!
+	// not blurring the plane
 	drawPlane();
+	
+	// TODO: Uncomment the code below to blur plane partially.
+//	GLfloat alpha = 0.2, beta = 0.5;
+//	glAccum(GL_MULT, 1.0f - alpha);
+//	glAccum(GL_ACCUM, alpha);
+//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//	
+//	drawPlane();
+//	glAccum(GL_ACCUM, beta * alpha);
+//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//	
+//	glAccum(GL_RETURN, 1.0/(1.0 - beta));
+//	drawPlane();
+//	
+//	// TODO: Now multiply the frame buffer by `beta` (or beta * alpha : check).
 	
 	glutSwapBuffers();
 	frameCount++;
