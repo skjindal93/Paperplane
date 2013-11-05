@@ -13,6 +13,11 @@ double randf()	{
 	return (double)rand() / (double)RAND_MAX;
 }
 
+struct Obstacle{
+	GLfloat	z;
+	Object *obj;
+};
+
 /////////////////////////////////////////////////////////////
 //////////////////////// Constants //////////////////////////
 /////////////////////////////////////////////////////////////
@@ -33,9 +38,14 @@ Material terrMaterial;
 GLuint bgTex;
 #define STAR_COUNT 7
 glm::vec4 stars[STAR_COUNT];
-GLfloat stargap;
+#define OBJECT_COUNT 5
+vector<Obstacle*> obstaclesList;
+vector<Object> allObjects;
+GLfloat stargap, obstaclegap;
 int score, xold, yold, vx, vy;
 int maxX, maxY, hovered;
+bool collide;
+GLfloat planeFarZ;
 
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -74,6 +84,20 @@ void initConstants()	{
 	maxY = 12.0f;
 	for(int i = 0; i < STAR_COUNT; ++i)
 		stars[i] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f - i * stargap, randf());
+
+	obstaclegap = 120.0f;
+	for (int j = 0; j < OBJECT_COUNT; j++){
+		int random = rand();
+		Object *obj;
+		obj = &(allObjects[random % allObjects.size()]);
+		
+		Obstacle *obs;
+		obs = new Obstacle();
+		obs->z = -150.0f - j * obstaclegap;
+		obs->obj = obj;
+		obstaclesList.push_back(obs);
+	}
+	
 	score = xold = yold = vx = vy = hovered = 0;
 }
 
@@ -140,6 +164,7 @@ void GLInit()	{
 	
 	plane = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/plane.obj"))[0];
 	plane.load();
+	plane.save = true;
 	
 	star = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/star.obj"))[0];
 	star.load();
@@ -154,11 +179,11 @@ void resizeWindow(int w, int h)	{
 	winH = h;
 	
 	// Let's not change our view for different window sizes.
-	int small = min(w,h);
-	wLo = (w-small)/2;
-	hLo = (h-small)/2;
-	wHi = small + wLo;
-	hHi = small + hLo;
+	int smaller = min(w,h);
+	wLo = (w-smaller)/2;
+	hLo = (h-smaller)/2;
+	wHi = smaller + wLo;
+	hHi = smaller + hLo;
 	
 	//Tell OpenGL how to convert from coordinates to pixel values
 	glViewport(wLo, hLo, wHi - wLo, hHi - hLo);
@@ -315,6 +340,28 @@ void drawStatics()	{
 		}
 	}
 	
+	//Objects
+	for(int j=0; j < OBJECT_COUNT; j++) {
+		Obstacle *obs;
+		obs = obstaclesList[j];
+		
+		if (obs->z > curZ) {
+			obs->z -= obstaclegap * OBJECT_COUNT;
+			obs->obj = &( allObjects[rand() % allObjects.size()] );
+		}
+		else {
+			if (planeFarZ > obs->z)
+				obs->obj->save = true;
+			
+			//drawObject();
+			
+			if (obs->obj->save)
+				collide = collide || plane.collision(obs->obj);
+
+			obs->obj->save = false;
+		}
+	}
+	
 	glPopMatrix();
 }
 
@@ -363,7 +410,7 @@ void drawScene()	{
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the rendering window
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
-	
+	collide = false;
 
 //	UP vector rotation. TODO: Turn on?
 //	glm::vec4 UP(0.0f, 1.0f, 0.0f, 1.0f);
@@ -407,6 +454,10 @@ void drawScene()	{
 //	
 //	// TODO: Now multiply the frame buffer by `beta` (or beta * alpha : check).
 	
+	if(collide)	{
+		// TODO End Game
+	}
+
 	glutSwapBuffers();
 	frameCount++;
 	

@@ -21,6 +21,7 @@
 #include <cstdarg>
 #include <ctime>
 #include <iostream>
+#include <limits>
 using namespace std;
 
 
@@ -30,8 +31,11 @@ using namespace std;
 #else
 #ifdef _WIN32
 #include <windows.h>
-#endif
+#include <GL/freeglut.h>
+#include <gl/glext.h>
+#else
 #include <GL/glut.h>
+#endif
 #endif
 
 /* GLM */

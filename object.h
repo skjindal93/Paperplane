@@ -30,10 +30,11 @@ struct triangle	{
 
 class Object	{
 public:
-	bool loaded, useTex, useNormal;
+	bool loaded, useTex, useNormal, save;
 	GLuint texture, vertexVBO, textureVBO, normalVBO;
 	vector<glm::vec3> normals, vertices;
 	vector<glm::vec2> uvs;
+	glm::mat4 *modelView;
 	vector<triangle> triangles;
 	Material *mtl;
 	char* name;
@@ -41,6 +42,7 @@ public:
 	Object();
 	
 	void load();
+	bool collision(Object *other);
 	void render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ);
 	void render(GLfloat scale = 1.0f);
 	void unload();
@@ -48,6 +50,8 @@ public:
 	~Object();
 
 };
+
+bool triangleIntersect(glm::vec3 a[3], glm::vec3 b[3]);
 
 vector<Object>* readOBJ(const char* file);
 

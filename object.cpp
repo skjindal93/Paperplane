@@ -75,7 +75,8 @@ vector<Material>* readMTL(const char* file)	{
 
 Object::Object()	{
 	useTex = useNormal = 0;
-	loaded = false;
+	loaded = save = false;
+	modelView = NULL;
 	texture = vertexVBO = textureVBO = normalVBO = 0;
 	normals.clear();
 	vertices.clear();
@@ -267,6 +268,15 @@ void Object::unload()	{
 	loaded = false;
 }
 
+bool triangleIntersect(glm::vec3 a[3], glm::vec3 b[3]){
+	return true;
+}
+
+bool Object::collision(Object *other){
+
+	return true;
+}
+
 void Object::render(GLfloat scale)	{
 	render(scale, scale, scale);
 }
@@ -277,6 +287,14 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 	glPushAttrib(GL_CURRENT_BIT);
 	
     glScalef(scaleX, scaleY, scaleZ);
+	
+	if (save) {
+		if (!modelView)
+			modelView = new glm::mat4();
+
+		glGetFloatv (GL_MODELVIEW_MATRIX, glm::value_ptr(*modelView));
+	}
+
 	
 	if(mtl)
 		mtl->apply();
