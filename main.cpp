@@ -82,21 +82,22 @@ void initConstants()	{
 	stargap = 50.0f;
 	maxX = 10.0f;
 	maxY = 12.0f;
+	
 	for(int i = 0; i < STAR_COUNT; ++i)
 		stars[i] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f - i * stargap, randf());
 
-	obstaclegap = 120.0f;
-	for (int j = 0; j < OBJECT_COUNT; j++){
-		int random = rand();
-		Object *obj;
-		obj = &(allObjects[random % allObjects.size()]);
-		
-		Obstacle *obs;
-		obs = new Obstacle();
-		obs->z = -150.0f - j * obstaclegap;
-		obs->obj = obj;
-		obstaclesList.push_back(obs);
-	}
+//	obstaclegap = 120.0f;
+//	for (int j = 0; j < OBJECT_COUNT; j++){
+//		int random = rand();
+//		Object *obj;
+//		obj = &(allObjects[random % allObjects.size()]);
+//		
+//		Obstacle *obs;
+//		obs = new Obstacle();
+//		obs->z = -150.0f - j * obstaclegap;
+//		obs->obj = obj;
+//		obstaclesList.push_back(obs);
+//	}
 	
 	score = xold = yold = vx = vy = hovered = 0;
 }
@@ -278,7 +279,7 @@ void drawPlane()	{
 	glPushMatrix();
 	
 	glTranslatef(planeX, planeY, -5.0f);
-	glRotatef(vx, 0.0f, 0.0f, 1.0f);
+	glRotatef(vx * 1.5, 0.0f, 0.0f, 1.0f);
 	glRotatef(10.0f, 1.0f, 0.0f, 0.0f);
 	plane.render(0.5f, 0.3f, -0.9f);
 	
@@ -340,27 +341,27 @@ void drawStatics()	{
 		}
 	}
 	
-	//Objects
-	for(int j=0; j < OBJECT_COUNT; j++) {
-		Obstacle *obs;
-		obs = obstaclesList[j];
-		
-		if (obs->z > curZ) {
-			obs->z -= obstaclegap * OBJECT_COUNT;
-			obs->obj = &( allObjects[rand() % allObjects.size()] );
-		}
-		else {
-			if (planeFarZ > obs->z)
-				obs->obj->save = true;
-			
-			//drawObject();
-			
-			if (obs->obj->save)
-				collide = collide || plane.collision(obs->obj);
-
-			obs->obj->save = false;
-		}
-	}
+//	//Objects
+//	for(int j=0; j < OBJECT_COUNT; j++) {
+//		Obstacle *obs;
+//		obs = obstaclesList[j];
+//		
+//		if (obs->z > curZ) {
+//			obs->z -= obstaclegap * OBJECT_COUNT;
+//			obs->obj = &( allObjects[rand() % allObjects.size()] );
+//		}
+//		else {
+//			if (planeFarZ > obs->z)
+//				obs->obj->save = true;
+//			
+//			//drawObject();
+//			
+//			if (obs->obj->save)
+//				collide = collide || plane.collision(obs->obj);
+//
+//			obs->obj->save = false;
+//		}
+//	}
 	
 	glPopMatrix();
 }

@@ -44,7 +44,7 @@ using namespace std;
 #include "glm/gtc/type_ptr.hpp"
 
 /* Project Libraries */
-#include "ppm.h"
+#include "image.h"
 #include "terrain.h"
 #include "object.h"
 

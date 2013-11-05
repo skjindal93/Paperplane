@@ -1,13 +1,13 @@
 //
-//  ppm.h
+//  image.h
 //  PaperPlane
 //
 //  Created by Shivanker Goel on 19/10/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 
-#ifndef __PaperPlane__ppm__
-#define __PaperPlane__ppm__
+#ifndef __PaperPlane__image__
+#define __PaperPlane__image__
 
 #include "paperplane.h"
 
@@ -23,4 +23,4 @@ public:
 Image* readP6(const char* file);
 GLuint loadTexture(const char* file);
 
-#endif /* defined(__PaperPlane__ppm__) */
+#endif /* defined(__PaperPlane__image__) */
