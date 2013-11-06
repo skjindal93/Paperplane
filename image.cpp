@@ -22,109 +22,81 @@ Image::~Image()	{
 	delete[] pixel;
 }
 
-
-Image* readP6(const char* file)	{
-	FILE *img;
-	img = fopen(file, "rb");
+Image* readP3(const char* file)	{
+	ifstream img;
+	img.open(file);
 	char buff[16];
 	
-	fgets(buff, sizeof(buff), img);
+	img >> buff;
 	//check the image format
-    if (buff[0] != 'P' || buff[1] != '6') {
-		cerr << "File not in the standard P6 format." << endl;
+    if (buff[0] != 'P' || buff[1] != '3') {
+		cerr << "File not in the standard P3 format." << endl;
 		return NULL;
 	}
 	
-	//check for comments
-    int c = getc(img);
-    while (c == '#') {
-#pragma GCC diagnostic ignored "-Wempty-body"
-    	while (getc(img) != '\n');
-        c = getc(img);
-    }
-	ungetc(c, img);
-	
-	int w, h;
+	int w, h, alpha;
 	//read image size information
-    if (fscanf(img, "%d %d", &w, &h) != 2) {
-        cerr << "Invalid size for image." << endl;
-        return NULL;
-    }
-	
-	int alpha = 0;
+	img >> w >> h >> alpha;
 	
     //read rgb component
-    if (fscanf(img, "%d", &alpha) != 1 || alpha > 255 || alpha < 0) {
-        cerr << "Invalid RGB component for image. Expected an integer in the range 0 to 255.";
+    if (alpha > 255 || alpha < 0 || w < 0 || h < 0) {
+        cerr << "Invalid size/alpha specifications for image.";
         return NULL;
     }
-    while (fgetc(img) != '\n') ;
 	
 	Image *obj;
 	obj = new Image(w, h);
 	
 	//read pixel data from file
-	unsigned char *data;
-	data = new unsigned char[w * 3 * h + 5];
-    if (fread(data, 3 * w, h, img) != h)
-        cerr << "Could not read the whole image file! Trying to proceed.";
-    fclose(img);
-	
-    for(int i = 0; i < w; ++i)
-    	for(int j = 0; j < h; ++j)	{
-    		obj->pixel[i][j][0] = (double)data[3 * (i + w * j) + 0] / (double)alpha;
-    		obj->pixel[i][j][1] = (double)data[3 * (i + w * j) + 1] / (double)alpha;
-    		obj->pixel[i][j][2] = (double)data[3 * (i + w * j) + 2] / (double)alpha;
-    	}
-    delete[] data;
+	for(int i = 0; i < h; ++i)
+		for(int j = 0; j < w; ++j)	{
+			img >> obj->pixel[j][i][0] >> obj->pixel[j][i][1] >> obj->pixel[j][i][2];
+			obj->pixel[j][i][0] /= (double)alpha;
+			obj->pixel[j][i][1] /= (double)alpha;
+			obj->pixel[j][i][2] /= (double)alpha;
+		}
+	img.close();
 	
 	return obj;
 }
 
 GLuint loadTexture(const char* file)	{
-    FILE * img;
-	img = fopen(file, "rb");
+	ifstream img;
+	img.open(file);
 	char buff[16];
 	
-	fgets(buff, sizeof(buff), img);
+	img >> buff;
 	//check the image format
-    if (buff[0] != 'P' || buff[1] != '6') {
-		cerr << "Texture file not in the standard P6 format." << endl;
-		return 0;
+    if (buff[0] != 'P' || buff[1] != '3') {
+		cerr << "Texture file not in the standard P3 format." << endl;
+		return NULL;
 	}
 	
-	//check for comments
-    int c = getc(img);
-    while (c == '#') {
-#pragma GCC diagnostic ignored "-Wempty-body"
-    	while (getc(img) != '\n');
-        c = getc(img);
-    }
-	ungetc(c, img);
-	
-	int w, h;
+	int w, h, alpha;
 	//read image size information
-    if (fscanf(img, "%d %d", &w, &h) != 2) {
-        cerr << "Invalid size for texture image." << endl;
-        return 0;
-    }
-	
-	int alpha = 0;
+	img >> w >> h >> alpha;
 	
     //read rgb component
-    if (fscanf(img, "%d", &alpha) != 1 || alpha > 255 || alpha < 0) {
-        cerr << "Invalid RGB component for texture image. Expected an integer in the range 0 to 255.";
-        return 0;
+    if (alpha != 255 || w < 0 || h < 0) {
+        cerr << "Invalid size/alpha specifications for texture.";
+        return NULL;
     }
-    while (fgetc(img) != '\n') ;
+	
+	unsigned char data[w * h * 3 + 2];
 	
 	//read pixel data from file
-	unsigned char *data;
-	data = new unsigned char[w * 3 * h + 5];
-    if (fread(data, 3 * w * h, 1, img) != h)
-        cerr << "Could not read the whole texture file! Trying to proceed.";
-    fclose(img);
-	
+	for(int i = 0; i < h; ++i)
+		for(int j = 0; j < w; ++j)	{
+			int temp;
+			img >> temp;
+			data[(i * w + j)*3 + 0] = temp;
+			img >> temp;
+			data[(i * w + j)*3 + 1] = temp;
+			img >> temp;
+			data[(i * w + j)*3 + 2] = temp;
+		}
+	img.close();
+
 	GLuint texture;
 	glGenTextures( 1, &texture );
     glBindTexture( GL_TEXTURE_2D, texture );
@@ -137,7 +109,6 @@ GLuint loadTexture(const char* file)	{
     glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 	
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	delete[] data;
 	
 	return texture;
 }
