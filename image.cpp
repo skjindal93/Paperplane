@@ -22,7 +22,7 @@ Image::~Image()	{
 	delete[] pixel;
 }
 
-Image* readP3(const char* file)	{
+Image* readP3(string file)	{
 	ifstream img;
 	img.open(file);
 	char buff[16];
@@ -60,7 +60,7 @@ Image* readP3(const char* file)	{
 	return obj;
 }
 
-GLuint loadTexture(const char* file)	{
+GLuint loadTexture(string file)	{
 	ifstream img;
 	img.open(file);
 	char buff[16];

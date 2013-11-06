@@ -20,7 +20,7 @@ public:
 	~Image();
 };
 
-Image* readP3(const char* file);
-GLuint loadTexture(const char* file);
+Image* readP3(string file);
+GLuint loadTexture(string file);
 
 #endif /* defined(__PaperPlane__image__) */

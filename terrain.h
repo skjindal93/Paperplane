@@ -18,7 +18,7 @@ public:
 	float** heights;
 	glm::vec3** normals;
 
-	Terrain(Image* hmap, const char* texture = NULL, int lod = 1);
+	Terrain(Image* hmap, string texture = "", int lod = 1);
 	void computeNormals();
 	void render(GLfloat height, GLfloat size, GLfloat starting = 0, GLfloat fraction = 1.0f);
 	void buildArrayBuffers();

@@ -158,19 +158,20 @@ void GLInit()	{
 	glFogf(GL_FOG_DENSITY, 0.0015f);
 	
 	cout << "Reading terrain..\n";
-	Image *img = readP3("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/heightmap.desert.ppm");
+	
+	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
 	if(img != NULL)
-		terr = new Terrain(img, "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/colormap.desert.ppm", 10);
+		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
 	cout << "Terrain loaded!\n";
 	
-	plane = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/plane.obj"))[0];
+	plane = (*readOBJ(string(PATH) + "plane.obj"))[0];
 	plane.load();
 	plane.save = true;
 	
-	star = (*readOBJ("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/star.obj"))[0];
+	star = (*readOBJ(string(PATH) + "star.obj"))[0];
 	star.load();
 	
-	bgTex = loadTexture("/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/bg.sky.ppm");
+	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
 }
 
 // glut's window resize function

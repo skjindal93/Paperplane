@@ -22,7 +22,7 @@ public:
 	~Material();
 };
 
-vector<Material>* readMTL(const char* file);
+vector<Material>* readMTL(string file);
 
 struct triangle	{
 	glm::ivec3 v, t, n;
@@ -53,6 +53,6 @@ public:
 
 bool triangleIntersect(glm::vec3 a[3], glm::vec3 b[3]);
 
-vector<Object>* readOBJ(const char* file);
+vector<Object>* readOBJ(string file);
 
 #endif /* defined(__PaperPlane__object__) */

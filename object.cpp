@@ -27,13 +27,13 @@ void Material::apply()	{
 	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, glm::value_ptr(Ke));
 }
 
-vector<Material>* readMTL(const char* file)	{
+vector<Material>* readMTL(string file)	{
 	vector<Material>* materials;
 	materials = new vector<Material>();
 	Material *cur = NULL;
 	
 	// read file
-	FILE *mtl = fopen(file, "r");
+	FILE *mtl = fopen(file.c_str(), "r");
 	if(mtl == NULL)
 		cerr << "Could not read file " << file << endl;
 	else	{
@@ -94,7 +94,7 @@ Object::~Object()	{
 	delete[] name;
 }
 
-vector<Object>* readOBJ(const char* file)	{
+vector<Object>* readOBJ(string file)	{
 	vector<Object>* objects;
 	objects = new vector<Object>();
 	Object *cur = NULL;
@@ -106,7 +106,7 @@ vector<Object>* readOBJ(const char* file)	{
 		dir = "";
 	
 	// read file
-	FILE *obj = fopen(file, "r");
+	FILE *obj = fopen(file.c_str(), "r");
 	if(obj == NULL)
 		cerr << "Could not read file " << file << endl;
 	else	{
@@ -120,7 +120,7 @@ vector<Object>* readOBJ(const char* file)	{
 				
 				char buffer[1000];
 				fscanf(obj, "%*[ ]%255[^\n]", buffer);
-				mtllib = readMTL((char*)dir.append(buffer).c_str());
+				mtllib = readMTL(dir.append(buffer));
 				
 			} else if (!strcmp(type, "o"))	{
 				

@@ -8,7 +8,7 @@
 
 #include "paperplane.h"
 
-Terrain::Terrain(Image* img, const char* texFile, int lod)	{
+Terrain::Terrain(Image* img, string texFile, int lod)	{
     w = img->w;
 	h = img->h;
 	
@@ -27,7 +27,7 @@ Terrain::Terrain(Image* img, const char* texFile, int lod)	{
 			heights[i][j] = (img->pixel[i][j][0] + img->pixel[i][j][1] + img->pixel[i][j][2])/3;
     
 	computeNormals();
-	if(texFile)
+	if(texFile.size() > 0)
 		texture = loadTexture(texFile);
 	
 	this->lod = lod;
