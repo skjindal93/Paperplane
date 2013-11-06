@@ -99,12 +99,7 @@ vector<Object>* readOBJ(string file)	{
 	objects = new vector<Object>();
 	Object *cur = NULL;
 	vector<Material> *mtllib;
-	string dir = file;
-	if(string::npos != dir.rfind('/'))
-		dir = dir.substr(0, dir.rfind('/')+1);
-	else
-		dir = "";
-	
+
 	// read file
 	FILE *obj = fopen(file.c_str(), "r");
 	if(obj == NULL)
@@ -120,7 +115,7 @@ vector<Object>* readOBJ(string file)	{
 				
 				char buffer[1000];
 				fscanf(obj, "%*[ ]%255[^\n]", buffer);
-				mtllib = readMTL(dir.append(buffer));
+				mtllib = readMTL(string(PATH) + buffer);
 				
 			} else if (!strcmp(type, "o"))	{
 				
