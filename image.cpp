@@ -82,7 +82,8 @@ GLuint loadTexture(string file)	{
         return NULL;
     }
 	
-	unsigned char data[w * h * 3 + 2];
+	unsigned char *data;
+	data = new unsigned char[w * h * 3 + 2];
 	
 	//read pixel data from file
 	for(int i = 0; i < h; ++i)
@@ -110,5 +111,6 @@ GLuint loadTexture(string file)	{
 	
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
 	
+	delete[] data;
 	return texture;
 }

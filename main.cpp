@@ -159,7 +159,7 @@ void GLInit()	{
 	
 	cout << "Reading terrain..\n";
 	
-	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
+	Image *img = readP3(string(PATH) + string("heightmap.desert.ppm"));
 	if(img != NULL)
 		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
 	cout << "Terrain loaded!\n";

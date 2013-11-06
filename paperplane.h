@@ -11,8 +11,9 @@
 
 
 /* Standard C/C++ includes */
-#include <cstdio>
+#include <cstdio
 #include <cstdlib>
+#include <string>
 #include <cstring>
 #include <cmath>
 #include <algorithm>
@@ -36,7 +37,7 @@ using namespace std;
 #include <windows.h>
 #include <GL/freeglut.h>
 #include <gl/glext.h>
-#define PATH "paperplane/"
+#define PATH "paperplane\\"
 
 #else
 #include <GL/glut.h>
