@@ -207,6 +207,8 @@ vector<Object>* readOBJ(string file)	{
 }
 
 void Object::load()	{
+	if(vertexVBO)
+		return;
 	
 	int ntri = (int)triangles.size();
 	int nvert = 3 * ntri;
@@ -308,12 +310,13 @@ bool Object::collision(Object *other){
 		for (int j = 0; j < ntriB; j++)	{
 			
 			for (int l = 0; l < 3; l++)
-				b[l] = *(other->modelView) * glm::vec4(other->vertices[other->triangles[i].v[l]], 1);
+				b[l] = *(other->modelView) * glm::vec4(other->vertices[other->triangles[j].v[l]], 1);
 			
-			triangleIntersect(a,b);
+			if(triangleIntersect(a,b))
+				return true;
 		}
 	}
-	return true;
+	return false;
 }
 
 void Object::render(GLfloat scale)	{
@@ -328,7 +331,7 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
     glScalef(scaleX, scaleY, scaleZ);
 	
 	if (save) {
-		if (!modelView)
+		if (modelView == NULL)
 			modelView = new glm::mat4();
 
 		glGetFloatv (GL_MODELVIEW_MATRIX, glm::value_ptr(*modelView));
@@ -380,7 +383,8 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 			glBegin(GL_TRIANGLES);
 			for(int j = 0; j < 3; j++) {
 				int v = triangles[i].v[j], n = triangles[i].n[j], t = triangles[i].t[j];
-				glNormal3f(normals[n][0], normals[n][1], normals[n][2]);
+				if(normals.size() > 0)
+					glNormal3f(normals[n][0], normals[n][1], normals[n][2]);
 				if(texture) glTexCoord2f(uvs[t][0], uvs[t][1]);
 				glVertex3f(vertices[v][0], vertices[v][1], vertices[v][2]);
 			}

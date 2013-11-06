@@ -40,10 +40,10 @@ GLuint bgTex;
 glm::vec4 stars[STAR_COUNT];
 #define OBJECT_COUNT 5
 vector<Obstacle*> obstaclesList;
-vector<Object> allObjects;
+vector<Object> *allObjects;
 GLfloat stargap, obstaclegap;
 int score, xold, yold, vx, vy;
-int maxX, maxY, hovered;
+int maxX, maxY, hovered, tosave;
 bool collide;
 GLfloat planeFarZ;
 
@@ -86,19 +86,21 @@ void initConstants()	{
 	for(int i = 0; i < STAR_COUNT; ++i)
 		stars[i] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f - i * stargap, randf());
 
-//	obstaclegap = 120.0f;
-//	for (int j = 0; j < OBJECT_COUNT; j++){
-//		int random = rand();
-//		Object *obj;
-//		obj = &(allObjects[random % allObjects.size()]);
-//		
-//		Obstacle *obs;
-//		obs = new Obstacle();
-//		obs->z = -150.0f - j * obstaclegap;
-//		obs->obj = obj;
-//		obstaclesList.push_back(obs);
-//	}
-	
+	obstaclegap = 120.0f;
+	allObjects = readOBJ(string(PATH) + "objects.obj");
+	for (int j = 0; j < OBJECT_COUNT; j++){
+		int random = rand();
+		Object *obj;
+		obj = &((*allObjects)[random % allObjects->size()]);
+		obj->load();
+		
+		Obstacle *obs;
+		obs = new Obstacle();
+		obs->z = -150.0f - j * obstaclegap;
+		obs->obj = obj;
+		obstaclesList.push_back(obs);
+	}
+	tosave = 0;
 	score = xold = yold = vx = vy = hovered = 0;
 }
 
@@ -108,8 +110,7 @@ void initConstants()	{
 
 // Initialize OpenGL's rendering modes
 void GLInit()	{
-	
-	srand((unsigned)time(NULL));
+
 	glEnable ( GL_DEPTH_TEST );
 	glClear ( GL_ACCUM_BUFFER_BIT );
 	myQuadric = gluNewQuadric();
@@ -299,6 +300,22 @@ void drawStar(float rotOffset = 0.0f)	{
 	glPopMatrix();
 }
 
+void drawObject(Obstacle *obs)	{
+	glPushMatrix();
+	
+	glTranslatef(0.0f, 0.0f, obs->z);
+	
+	if(!strcmp(obs->obj->name, "Torus"))	{
+		glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+		obs->obj->render();
+	} else if(!strcmp(obs->obj->name, "Triangle"))	{
+		//glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+		obs->obj->render(3.0f);
+	}
+	
+	glPopMatrix();
+}
+
 void drawStatics()	{
 	glPushMatrix();
 	glPushAttrib(GL_LIGHTING_BIT);
@@ -342,27 +359,36 @@ void drawStatics()	{
 		}
 	}
 	
-//	//Objects
-//	for(int j=0; j < OBJECT_COUNT; j++) {
-//		Obstacle *obs;
-//		obs = obstaclesList[j];
-//		
-//		if (obs->z > curZ) {
-//			obs->z -= obstaclegap * OBJECT_COUNT;
-//			obs->obj = &( allObjects[rand() % allObjects.size()] );
-//		}
-//		else {
-//			if (planeFarZ > obs->z)
-//				obs->obj->save = true;
-//			
-//			//drawObject();
-//			
-//			if (obs->obj->save)
-//				collide = collide || plane.collision(obs->obj);
-//
-//			obs->obj->save = false;
-//		}
-//	}
+	//Objects
+	for(int j=0; j < OBJECT_COUNT; j++) {
+		Obstacle *obs;
+		obs = obstaclesList[j];
+		
+		if (obs->z > curZ) {
+			obs->obj->unload();
+			
+			obs->z -= obstaclegap * OBJECT_COUNT;
+			obs->obj = &( (*allObjects)[rand() % allObjects->size()] );
+			obs->obj->load();
+			
+			tosave ++;
+			tosave %= OBJECT_COUNT;
+		}
+		else {
+			if (tosave == j)
+				obs->obj->save = true;
+			
+			drawObject(obs);
+			
+			if (obs->obj->save)
+				collide = collide || plane.collision(obs->obj);
+
+			delete[] obs->obj->modelView;
+			obs->obj->modelView = NULL;
+
+			obs->obj->save = false;
+		}
+	}
 	
 	glPopMatrix();
 }
@@ -409,6 +435,7 @@ void drawMoving()	{
 
 // glut's Main Display Function
 void drawScene()	{
+	drawPlane();
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the rendering window
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
@@ -434,9 +461,9 @@ void drawScene()	{
 	//cout<<curZ<<endl;
 	drawMoving();
 
-	glAccum(GL_MULT, 0.5);
-	glAccum(GL_ACCUM, 0.5);
-	glAccum(GL_RETURN, 1.0);
+//	glAccum(GL_MULT, 0.5);
+//	glAccum(GL_ACCUM, 0.5);
+//	glAccum(GL_RETURN, 1.0);
 	
 	// not blurring the plane
 	drawPlane();
@@ -457,7 +484,7 @@ void drawScene()	{
 //	// TODO: Now multiply the frame buffer by `beta` (or beta * alpha : check).
 	
 	if(collide)	{
-		// TODO End Game
+		cout << "Hawwwwwww!\n";
 	}
 
 	glutSwapBuffers();
@@ -494,6 +521,8 @@ void iter(int dummy)	{
 }
 
 int main(int argc, char * argv[])		{
+	srand((unsigned)time(NULL));
+	
 	// Need to double buffer for animation
 	glutInit(&argc,argv);
 	glutInitDisplayMode( GLUT_ACCUM | GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_MULTISAMPLE);
