@@ -272,8 +272,8 @@ bool triangleIntersect(glm::vec4 a[3], glm::vec4 b[3]){
 	GLfloat minXa,minYa,minZa,maxXa,maxYa,maxZa;
 	GLfloat minXb,minYb,minZb,maxXb,maxYb,maxZb;
 	for (int i=0; i<3; i ++){
-		a[i] = a[i]/a[i][3];
-		b[i] = b[i]/b[i][3];
+		a[i] /= a[i][3];
+		b[i] /= b[i][3];
 	}
 	minXa = min( min( a[0][0],a[1][0] ),a[2][0] );
 	minYa = min( min( a[0][1],a[1][1] ),a[2][1] );
@@ -291,25 +291,30 @@ bool triangleIntersect(glm::vec4 a[3], glm::vec4 b[3]){
 	maxYb = max( max( b[0][1],b[1][1] ),b[2][1] );
 	maxZb = max( max( b[0][2],b[1][2] ),b[2][2] );
 	
-	if ( ( ( minXb > minXa && minXb < maxXa ) || ( maxXb > minXa && maxXb < maxXa ) ) 
-		&& ( ( minYb > minYa && minYb < maxYa ) || ( maxYb > minYa && maxYb < maxYa ) ) 
-		&& ( ( minZb > minZa && minZb < maxZa ) || ( maxZb > minZa && maxZb < maxZa ) ) ){
-			//TODO Check Intersection
-	}
+	if ( (maxXb < minXa || maxXa < minXb)
+		|| (maxYb < minYa || maxYa < minYb)
+		|| (maxZb < minZa || maxZa < minZb) )
+		return false;
 	
-	return false;
+	// TODO
+	return true;
 }
 
 bool Object::collision(Object *other){
 	int ntriA = (int)this->triangles.size();
 	int ntriB = (int)other->triangles.size();
 	glm::vec4 a[3],b[3];
-	for (int i=0; i < ntriA; i ++){
-		for (int k = 0; k < 3; k ++)
-			a[k]=*(this->modelView) * glm::vec4(glm::vec3(this->triangles[i].v[k]),1);
-		for (int j = 0; j < ntriB; j ++){
-			for (int l = 0; l < 3; l ++)
-				b[l]=*(other->modelView) * glm::vec4(glm::vec3(other->triangles[i].v[l]),1);
+	
+	for (int i=0; i < ntriA; i++)	{
+		
+		for (int k = 0; k < 3; k++)
+			a[k] = *(this->modelView) * glm::vec4(this->vertices[this->triangles[i].v[k]], 1);
+		
+		for (int j = 0; j < ntriB; j++)	{
+			
+			for (int l = 0; l < 3; l++)
+				b[l] = *(other->modelView) * glm::vec4(other->vertices[other->triangles[i].v[l]], 1);
+			
 			triangleIntersect(a,b);
 		}
 	}
