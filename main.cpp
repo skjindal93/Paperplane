@@ -135,6 +135,7 @@ void GLInit()	{
 //												//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	glEnable(GL_MULTISAMPLE);
+	glDisable(GL_CULL_FACE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to white
@@ -206,7 +207,7 @@ void resizeWindow(int w, int h)	{
 	glLoadIdentity(); //Reset the camera
 	gluPerspective(65.0f*zoom,            // FOV
 				   1.0f, //(double)w / (double)h, // Aspect
-				   0.0001,                // near-clipping
+				   0.1f,                // near-clipping
 				   2000.0);               // far-clipping
 	
 }
@@ -371,13 +372,9 @@ void drawObstacle(Obstacle *obs)	{
 	if(!strcmp(obs->obj->name, "Torus"))	{
 		glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
 		obs->obj->render();
-	} else if(!strcmp(obs->obj->name, "Star"))	{
-		//glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-//		glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
-//		glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
-//		glRotatef(360.0f*((double)((frameCount/2) % 50)/50.0f), 0.0f, 0.0f, 1.0f);
-//		glScalef(0.5f, 0.75f, 0.5f);
-//		obs->obj->render(3.0f);
+	} else if(!strcmp(obs->obj->name, "Cube"))	{
+		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
+		obs->obj->render();
 	}
 	
 	glPopMatrix();
