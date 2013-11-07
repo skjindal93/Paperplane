@@ -16,7 +16,8 @@ Material::Material()	{
 }
 
 Material::~Material()	{
-	delete[] name;
+	// TODO
+	//delete[] name;
 }
 
 void Material::apply()	{
@@ -91,7 +92,7 @@ Object::~Object()	{
 		unload();
 	if(texture)
 		glDeleteTextures( 1, &texture );
-	delete[] name;
+	//delete[] name;
 }
 
 vector<Object>* readOBJ(string file)	{
@@ -256,12 +257,18 @@ void Object::load()	{
 }
 
 void Object::unload()	{
-	if(textureVBO)
+	if(textureVBO)	{
 		glDeleteBuffers(1, &textureVBO);
-	if(vertexVBO)
+		textureVBO = 0;
+	}
+	if(vertexVBO)	{
 		glDeleteBuffers(1, &vertexVBO);
-	if(normalVBO)
+		vertexVBO = 0;
+	}
+	if(normalVBO)	{
 		glDeleteBuffers(1, &normalVBO);
+		normalVBO = 0;
+	}
 	loaded = false;
 }
 
@@ -372,6 +379,7 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 		}
 	}
 	else	{
+		cout << name << " not loaded!\n";
 		if(useTex)	{
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D, texture);

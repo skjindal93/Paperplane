@@ -18,6 +18,8 @@ struct Obstacle{
 	Object *obj;
 };
 
+void iter(int);
+
 /////////////////////////////////////////////////////////////
 //////////////////////// Constants //////////////////////////
 /////////////////////////////////////////////////////////////
@@ -46,6 +48,7 @@ int score, xold, yold, vx, vy;
 int maxX, maxY, hovered, tosave;
 bool collide;
 GLfloat planeFarZ;
+int xpaused, ypaused;
 
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -88,7 +91,7 @@ void initConstants()	{
 
 	obstaclegap = 120.0f;
 	allObjects = readOBJ(string(PATH) + "objects.obj");
-	for (int j = 0; j < OBJECT_COUNT; j++){
+	for (int j = 0; j < OBJECT_COUNT; j++)	{
 		int random = rand();
 		Object *obj;
 		obj = &((*allObjects)[random % allObjects->size()]);
@@ -101,7 +104,7 @@ void initConstants()	{
 		obstaclesList.push_back(obs);
 	}
 	tosave = 0;
-	score = xold = yold = vx = vy = hovered = 0;
+	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 }
 
 /////////////////////////////////////////////////////////////
@@ -202,6 +205,23 @@ void resizeWindow(int w, int h)	{
 	
 }
 
+void pause()	{
+	run = 0;
+	xpaused = xold;
+	ypaused = yold;
+}
+
+void resume()	{
+	run = 1;
+	xold = xpaused;
+	yold = ypaused;
+	zoom = 1.0f;
+	up = glm::vec3(0.0f, 1.0f, 0.0f);
+	zoom = 1.0f;
+	resizeWindow(winW, winH);
+	center[0] = center[1] = eye[0] = eye[1] = 0.0f;
+	glutTimerFunc(1, iter, 0);
+}
 
 
 
@@ -209,8 +229,6 @@ void resizeWindow(int w, int h)	{
 /////////////////////////////////////////////////////////////
 /////////////// Keyboard and Mouse Functions ////////////////
 /////////////////////////////////////////////////////////////
-
-void iter(int);
 
 void keyboardFunc(unsigned char key, int x, int y)	{
 	keyModifiers = glutGetModifiers();
@@ -222,9 +240,7 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 			break;
 		
 		case ' ':
-			run ^= 1;
-			if(run)
-				glutTimerFunc(1, iter, 0);
+			run ? pause() : resume();
 			break;
 			
 		case 27:                                    // "27" is theEscape key
@@ -238,25 +254,26 @@ void specialKeys(int k, int x, int y)	{
 }
 
 void hoverFunc(int x, int y)	{
-	hovered = 1;
+	if(run)	{
+		GLint w = wHi - wLo;
+		GLint h = hHi - hLo;
+		
+		x -= wLo;
+		y -= hLo;
+		x = min(max(0, x), w);
+		y = min(max(0, y), h);
+		
+		GLfloat dx = maxX *((float)x/w - 0.5f), dy = -maxY *((float)y/h - 0.5f);
+		planeX = dx;
+		planeY = dy;
+		
+		center[0] = eye[0] = dx/2.5f;
+		center[1] = eye[1] = dy/2.5f;
 
-	GLint w = wHi - wLo;
-	GLint h = hHi - hLo;
-	
-	x -= wLo;
-	y -= hLo;
-	x = min(max(0, x), w);
-	y = min(max(0, y), h);
-	
-	GLfloat dx = maxX *((float)x/w - 0.5f), dy = -maxY *((float)y/h - 0.5f);
-	planeX = dx;
-	planeY = dy;
-	
-	center[0] = eye[0] = dx/2.5f;
-	center[1] = eye[1] = dy/2.5f;
-	
-	vx = 0.2 * (xold - x) + 0.8 * vx;
-	vy = 0.2 * (yold - y) + 0.8 * vy;
+		vx = 0.2 * (xold - x) + 0.8 * vx;
+		vy = 0.2 * (yold - y) + 0.8 * vy;
+	}
+	hovered = 1;
 	xold = x;
 	yold = y;
 }
@@ -265,8 +282,48 @@ void clickFunc(int button, int state, int x, int y)	{
 	keyModifiers = glutGetModifiers();
 }
 
+void pan(int x, int y)	{
+	float goRight = -180.0f*(float)(x - xold)/(float)winW, goUp = -180.0f*(float)(yold - y)/(float)winH;
+	glm::vec3 dir = center - eye;
+	GLfloat r = sqrt(dir[0]*dir[0] + dir[1]*dir[1] + dir[2]*dir[2]);
+	dir = glm::normalize(dir);
+	
+	if((keyModifiers & GLUT_ACTIVE_SHIFT) > 0)	{
+		// FOV Zoom
+		float factor = pow(5, goRight/90 + goUp/90);
+		zoom *= factor;
+		resizeWindow(winW, winH);
+	}
+	else if((keyModifiers & GLUT_ACTIVE_ALT) > 0)	{
+		// Take eye towards centre
+		float factor = pow(5, goRight/90 + goUp/90);
+		eye[0] = center[0] - r*factor*dir[0];
+		eye[1] = center[1] - r*factor*dir[1];
+		eye[2] = center[2] - r*factor*dir[2];
+	}
+	else	{
+		glm::vec3 right = glm::cross(dir, up);
+		right = glm::normalize(right);
+		
+		glm::vec3 d;
+		d = -dir + up * sin(glm::radians(goUp)) + right * sin(glm::radians(goRight));
+		d = glm::normalize(d);
+		
+		eye = center + r*d;
+		
+		// update up vector to be perpendicular to d
+		glm::vec3 newUp = glm::cross(glm::cross(d, up), d);
+		up = newUp;
+		up = glm::normalize(up);
+	}
+	
+	xold = x;
+	yold = y;
+}
+
 void dragFunc(int x, int y)	{
-	//pan(x,y);
+	pan(x,y);
+	glutPostRedisplay();
 }
 
 
@@ -300,7 +357,7 @@ void drawStar(float rotOffset = 0.0f)	{
 	glPopMatrix();
 }
 
-void drawObject(Obstacle *obs)	{
+void drawObstacle(Obstacle *obs)	{
 	glPushMatrix();
 	
 	glTranslatef(0.0f, 0.0f, obs->z);
@@ -378,7 +435,7 @@ void drawStatics()	{
 			if (tosave == j)
 				obs->obj->save = true;
 			
-			drawObject(obs);
+			drawObstacle(obs);
 			
 			if (obs->obj->save)
 				collide = collide || plane.collision(obs->obj);
@@ -450,7 +507,7 @@ void drawScene()	{
 //	up[1] = UP[1];
 //	up[2] = UP[2];
 	
-	glm::normalize(up);
+	up = glm::normalize(up);
 	gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 	// Only now draw anything you want to.
 	
@@ -458,7 +515,6 @@ void drawScene()	{
 	
 	drawStatics();
 	glTranslatef(0.0f, 0.0f, curZ);
-	//cout<<curZ<<endl;
 	drawMoving();
 
 //	glAccum(GL_MULT, 0.5);
@@ -485,6 +541,7 @@ void drawScene()	{
 	
 	if(collide)	{
 		cout << "Hawwwwwww!\n";
+		pause();
 	}
 
 	glutSwapBuffers();
