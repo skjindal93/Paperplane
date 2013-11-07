@@ -31,7 +31,7 @@ GLUquadricObj* myQuadric = 0;
 GLint slices, stacks;
 GLfloat planeX, planeY, curZ;
 Terrain *terr;
-glm::vec3 specular, diffuse, ambient;
+glm::vec4 specular, diffuse, ambient;
 int t1, t2, frameCount, lastCount;
 GLfloat fps;
 GLvoid *font_style;
@@ -67,8 +67,8 @@ void initConstants()	{
 	
 	curZ = -5.0f;
 	
-	diffuse = glm::vec3(1.0f);
-	specular = glm::vec3(240.0f, 240.0f, 188.0f)/250.0f;
+	diffuse = glm::vec4(1.0f);
+	specular = glm::vec4(240.0f, 240.0f, 188.0f, 250.0f)/250.0f;
 	ambient = 1.0f - specular + 0.25f * diffuse;
 	
 	font_style = GLUT_BITMAP_HELVETICA_12;
@@ -86,9 +86,6 @@ void initConstants()	{
 	maxX = 10.0f;
 	maxY = 12.0f;
 	
-	for(int i = 0; i < STAR_COUNT; ++i)
-		stars[i] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f - i * stargap, randf());
-
 	obstaclegap = 120.0f;
 	allObjects = readOBJ(string(PATH) + "objects.obj");
 	for (int j = 0; j < OBJECT_COUNT; j++)	{
@@ -96,13 +93,17 @@ void initConstants()	{
 		Object *obj;
 		obj = &((*allObjects)[random % allObjects->size()]);
 		obj->load();
-		
+
 		Obstacle *obs;
 		obs = new Obstacle();
 		obs->z = -150.0f - j * obstaclegap;
 		obs->obj = obj;
 		obstaclesList.push_back(obs);
 	}
+
+	for(int i = 0; i < STAR_COUNT; ++i)
+		stars[i] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f - i * stargap, randf());
+
 	tosave = 0;
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 }
@@ -144,13 +145,13 @@ void GLInit()	{
 	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(specular));
 	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(diffuse));
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(ambient));
-	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 20.0f, -10.0f)));
+	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, -10.0f, 0.0f)));
 	
 	glEnable(GL_LIGHT1); //Enable light #1
 	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
 	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
 	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
-	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 20.0f, -10.0f)));
+	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, -10.0f, 0.0f)));
 		
     glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
     glShadeModel(GL_SMOOTH); //Enable smooth shading
@@ -347,7 +348,7 @@ void drawPlane()	{
 
 void drawStar(float rotOffset = 0.0f)	{
 	glPushMatrix();
-
+	
 	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
 	glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
 	glRotatef(360.0f*((double)((frameCount/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
@@ -365,9 +366,13 @@ void drawObstacle(Obstacle *obs)	{
 	if(!strcmp(obs->obj->name, "Torus"))	{
 		glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
 		obs->obj->render();
-	} else if(!strcmp(obs->obj->name, "Triangle"))	{
+	} else if(!strcmp(obs->obj->name, "Star"))	{
 		//glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-		obs->obj->render(3.0f);
+//		glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
+//		glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
+//		glRotatef(360.0f*((double)((frameCount/2) % 50)/50.0f), 0.0f, 0.0f, 1.0f);
+//		glScalef(0.5f, 0.75f, 0.5f);
+//		obs->obj->render(3.0f);
 	}
 	
 	glPopMatrix();

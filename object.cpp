@@ -21,11 +21,11 @@ Material::~Material()	{
 }
 
 void Material::apply()	{
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, glm::value_ptr(Ka));
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, glm::value_ptr(Kd));
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, glm::value_ptr(Ks));
-	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, s);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, glm::value_ptr(Ke));
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, glm::value_ptr(Ka));
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, glm::value_ptr(glm::vec4(Kd, 1.0f)));
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, glm::value_ptr(Ks));
+//	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, s);
+//	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, glm::value_ptr(Ke));
 }
 
 vector<Material>* readMTL(string file)	{
