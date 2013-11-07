@@ -156,6 +156,7 @@ void GLInit()	{
 	
 	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+	//glFrontFace(GL_CCW);
 	
     glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
     glShadeModel(GL_SMOOTH); //Enable smooth shading
@@ -472,15 +473,16 @@ void drawMoving()	{
 	glBindTexture(GL_TEXTURE_2D, bgTex);
 	
 	glBegin(GL_TRIANGLES);
+	glNormal3f(0.0f, 0.0f, 1.0f);
 	
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
+	glTexCoord2f(1.0f, -1.0f);
+	glVertex3f(1.0f, 1.0f, 0.0f);
 	
 	glTexCoord2f(1.0f, 1.0f);
 	glVertex3f(1.0f, -1.0f, 0.0f);
 	
-	glTexCoord2f(1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 0.0f);
+	glTexCoord2f(0.0f, 1.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
 	
 	glTexCoord2f(0.0f, 1.0f);
 	glVertex3f(-1.0f, -1.0f, 0.0f);

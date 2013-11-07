@@ -108,7 +108,18 @@ void Terrain::buildArrayBuffers()	{
 	for(int i = 0; i < ntri; ++i)	{
 		int z = i / (2*(w/lod - 1));
 		int x = (i % (2*(w/lod - 1)))/2;
-		glm::ivec3 vx(x, x + (i&1), x+1), vz(z+1, z+(i&1), z);
+		glm::ivec3 vx, vz;
+		// 2 cases instead of just vx(x, x + (i&1), x+1), vz(z+1, z+(i&1), z);
+		// because of (counter) clockwise winding issues
+		if(i&1)	{
+			vx = glm::vec3(x+1, x, x+1);
+			vz = glm::vec3(z+1, z+1, z);
+		}
+		else	{
+			vx = glm::vec3(x, x, x+1);
+			vz = glm::vec3(z+1, z, z);
+		}
+
 		vx *= lod;
 		vz *= lod;
 		
