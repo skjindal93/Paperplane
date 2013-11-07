@@ -31,7 +31,7 @@ GLUquadricObj* myQuadric = 0;
 GLint slices, stacks;
 GLfloat planeX, planeY, curZ;
 Terrain *terr;
-glm::vec4 specular, diffuse, ambient;
+glm::vec3 specular, diffuse, ambient;
 int t1, t2, frameCount, lastCount;
 GLfloat fps;
 GLvoid *font_style;
@@ -67,8 +67,8 @@ void initConstants()	{
 	
 	curZ = -5.0f;
 	
-	diffuse = glm::vec4(1.0f);
-	specular = glm::vec4(240.0f, 240.0f, 188.0f, 250.0f)/250.0f;
+	diffuse = glm::vec3(1.0f);
+	specular = glm::vec3(240.0f, 240.0f, 188.0f)/250.0f;
 	ambient = 1.0f - specular + 0.25f * diffuse;
 	
 	font_style = GLUT_BITMAP_HELVETICA_12;
@@ -140,19 +140,23 @@ void GLInit()	{
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to white
 	
 	glEnable(GL_LIGHTING); //Enable lighting
+	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, glm::value_ptr(glm::vec4(ambient, 1.0f)));
 	
 	glEnable(GL_LIGHT0); //Enable light #0
-	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(specular));
-	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(diffuse));
-	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(ambient));
-	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, -10.0f, 0.0f)));
+	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
+	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(glm::vec4(diffuse, 1.0f)));
+	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
+	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, 1.0f, 0.0f)));
 	
 	glEnable(GL_LIGHT1); //Enable light #1
 	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
 	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
 	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
-	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, -10.0f, 0.0f)));
-		
+	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, -2000.0f, 0.0f)));
+	
+	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
+	
     glEnable(GL_NORMALIZE); //Have OpenGL automatically normalize our normals
     glShadeModel(GL_SMOOTH); //Enable smooth shading
 	
