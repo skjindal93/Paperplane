@@ -166,6 +166,9 @@ void Terrain::render(GLfloat height, GLfloat size, GLfloat starting, GLfloat fra
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glEnable(GL_TEXTURE_2D);
 		glBindTexture(GL_TEXTURE_2D, texture);
+		glTexEnvi (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		//TODO: Check Separate specular color
+		glLightModeli (GL_LIGHT_MODEL_COLOR_CONTROL,GL_SEPARATE_SPECULAR_COLOR);
 		glBindBuffer(GL_ARRAY_BUFFER, textureVBO);
 		glTexCoordPointer(2, GL_FLOAT, 0, NULL);
 	}

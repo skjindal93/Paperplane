@@ -92,6 +92,7 @@ void initConstants()	{
 		int random = rand();
 		Object *obj;
 		obj = &((*allObjects)[random % allObjects->size()]);
+		obj->timesUsed++;
 		obj->load();
 
 		Obstacle *obs;
@@ -207,7 +208,7 @@ void resizeWindow(int w, int h)	{
 	glLoadIdentity(); //Reset the camera
 	gluPerspective(65.0f*zoom,            // FOV
 				   1.0f, //(double)w / (double)h, // Aspect
-				   0.1f,                // near-clipping
+				   0.5f,                // near-clipping
 				   2000.0);               // far-clipping
 	
 }
@@ -371,10 +372,11 @@ void drawObstacle(Obstacle *obs)	{
 	
 	if(!strcmp(obs->obj->name, "Torus"))	{
 		glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
-		obs->obj->render();
+		glScalef(1.0f, 1.5f, 1.5f);
+		obs->obj->render(1.0f, true);
 	} else if(!strcmp(obs->obj->name, "Cube"))	{
 		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
-		obs->obj->render();
+		obs->obj->render(1.0f, true);
 	}
 	
 	glPopMatrix();
@@ -429,10 +431,12 @@ void drawStatics()	{
 		obs = obstaclesList[j];
 		
 		if (obs->z > curZ) {
-			obs->obj->unload();
+			if(! --obs->obj->timesUsed)
+				obs->obj->unload();
 			
 			obs->z -= obstaclegap * OBJECT_COUNT;
 			obs->obj = &( (*allObjects)[rand() % allObjects->size()] );
+			obs->obj->timesUsed++;
 			obs->obj->load();
 			
 			tosave ++;

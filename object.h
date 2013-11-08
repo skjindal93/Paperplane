@@ -38,13 +38,14 @@ public:
 	vector<triangle> triangles;
 	Material *mtl;
 	char* name;
+	int timesUsed;
 	
 	Object();
 	
 	void load();
 	bool collision(Object *other);
-	void render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ);
-	void render(GLfloat scale = 1.0f);
+	void render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ, bool load = false);
+	void render(GLfloat scale = 1.0f, bool load = false);
 	void unload();
 	
 	~Object();

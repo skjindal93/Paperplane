@@ -85,6 +85,7 @@ Object::Object()	{
 	triangles.clear();
 	mtl = NULL;
 	name = new char[32];
+	timesUsed = 0;
 }
 
 Object::~Object()	{
@@ -273,11 +274,11 @@ void Object::unload()	{
 }
 
 GLfloat triangleArea(glm::vec3 a,glm::vec3 b,glm::vec3 c){
-	glm::vec3 v1 (b[0]-a[0],b[1]-a[1],b[2]-a[2]);
-	glm::vec3 v2 (c[0]-a[0],c[1]-a[1],c[2]-a[2]);
+	glm::vec3 v1 (b[0]-a[0], b[1]-a[1], b[2]-a[2]);
+	glm::vec3 v2 (c[0]-a[0], c[1]-a[1], c[2]-a[2]);
 	glm::vec3 cross = glm::cross(v1,v2);
-	GLfloat area = 0.5*sqrt(abs(glm::dot(cross,cross)));
-	return area;
+
+	return 0.5 * sqrt(abs(glm::dot(cross,cross)));
 }
 
 bool pointInTriangle(glm::vec3 triangle[3], glm::vec3 point){
@@ -286,21 +287,17 @@ bool pointInTriangle(glm::vec3 triangle[3], glm::vec3 point){
 	GLfloat A2 = triangleArea(triangle[0], point, triangle[2]);
 	GLfloat A3 = triangleArea(triangle[0], triangle[1], point);
 	
-	return (A==(A1 + A2 + A3));
+	return (A == (A1 + A2 + A3));
 }
 
 bool lineWithPlane(glm::vec3 plane[3], glm::vec3 x, glm::vec3 y){
-	glm::vec3 normal(glm::cross(plane[1]-plane[0],plane[2]-plane[0])); 
-	GLfloat lambda = glm::dot(plane[0]-x,normal)/glm::dot(y-x,normal);
-	if (lambda>=0.0f && lambda<=1.0f){
-		glm::vec3 point = x + lambda*(y - x);
-		if (pointInTriangle(plane,point))
-			return true;
-		else return false;
-	}
-	else {
-		return false;
-	}
+	glm::vec3 normal(glm::cross(plane[1] - plane[0], plane[2] - plane[0]));
+	GLfloat lambda = glm::dot(plane[0] - x, normal) / glm::dot(y-x, normal);
+	
+	if (lambda >= 0.0f && lambda <= 1.0f)
+		return pointInTriangle(plane, x + lambda * (y - x));
+	
+	return false;
 }
 
 bool triangleIntersect(glm::vec4 a[3], glm::vec4 b[3]){
@@ -308,7 +305,6 @@ bool triangleIntersect(glm::vec4 a[3], glm::vec4 b[3]){
 	GLfloat minXb,minYb,minZb,maxXb,maxYb,maxZb;
 	glm::vec3 TriA[3], TriB[3];
 
-	bool check = false;
 	for (int i=0; i<3; i ++){
 		a[i] /= a[i][3];
 		b[i] /= b[i][3];
@@ -336,27 +332,20 @@ bool triangleIntersect(glm::vec4 a[3], glm::vec4 b[3]){
 		return false;
 	}
 	
-	for (int k=0; k<3; k++){
+	for (int k=0; k<3; k++)	{
 		TriA[k] = glm::vec3(a[k][0],a[k][1],a[k][2]);
 		TriB[k] = glm::vec3(b[k][0],b[k][1],b[k][2]);
 	}
 
-	for (int j=0; j<3; j++){
-		if (lineWithPlane(TriA,TriB[j % 3],TriB[(j+1) % 3])){
-			check = true;
-			break;
-		}
-	}
-	if (!check){
-		for (int l=0; l<3; l++){
-			if (lineWithPlane(TriB,TriA[l % 3],TriA[(l+1) % 3])){
-				check = true;
-				break;
-			}
-		}
-	}
-	// TODO
-	return check;
+	for (int j=0; j<3; j++)
+		if (lineWithPlane(TriA, TriB[j % 3], TriB[(j+1) % 3]))
+			return true;
+
+	for (int l=0; l<3; l++)
+		if (lineWithPlane(TriB, TriA[l % 3], TriA[(l+1) % 3]))
+			return true;
+
+	return false;
 }
 
 bool Object::collision(Object *other){
@@ -370,7 +359,7 @@ bool Object::collision(Object *other){
 			a[k] = *(this->modelView) * glm::vec4(this->vertices[this->triangles[i].v[k]], 1);
 		
 		for (int j = 0; j < ntriB; j++)	{
-			
+
 			for (int l = 0; l < 3; l++)
 				b[l] = *(other->modelView) * glm::vec4(other->vertices[other->triangles[j].v[l]], 1);
 			
@@ -381,11 +370,11 @@ bool Object::collision(Object *other){
 	return false;
 }
 
-void Object::render(GLfloat scale)	{
-	render(scale, scale, scale);
+void Object::render(GLfloat scale, bool load)	{
+	render(scale, scale, scale, load);
 }
 
-void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
+void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ, bool load)	{
 	glPushMatrix();
 	glPushAttrib(GL_LIGHTING_BIT);
 	glPushAttrib(GL_CURRENT_BIT);
@@ -455,6 +444,9 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ)	{
 			
 		}
 		if(texture) glDisable(GL_TEXTURE_2D);
+		
+		if(load)
+			this->load();
 	}
 	
 	glPopAttrib();
