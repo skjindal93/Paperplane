@@ -58,5 +58,6 @@ using namespace std;
 #include "image.h"
 #include "terrain.h"
 #include "object.h"
+#include "shading.h"
 
 #endif

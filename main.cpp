@@ -49,6 +49,7 @@ int maxX, maxY, hovered, tosave;
 bool collide;
 GLfloat planeFarZ;
 int xpaused, ypaused;
+vector<Shader> shaders;
 
 void initConstants()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -107,6 +108,13 @@ void initConstants()	{
 
 	tosave = 0;
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
+	
+	// Initialising the shader with the file names and then pushing into the vector somehow doesn't work. :-/
+	for(int i = 0; i < 1; ++i)	{
+		Shader s;
+		shaders.push_back(s);
+	}
+	shaders[0].init(string(PATH) + "vertex.glsl", string(PATH) + "fragment.glsl");
 	
 	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
 	if(img != NULL)
@@ -344,10 +352,12 @@ void dragFunc(int x, int y)	{
 void drawPlane()	{
 	glPushMatrix();
 	
+	shaders[0].bind();
 	glTranslatef(planeX, planeY, -5.0f);
 	glRotatef(vx * 1.5, 0.0f, 0.0f, 1.0f);
 	glRotatef(10.0f, 1.0f, 0.0f, 0.0f);
 	plane.render(0.5f, 0.3f, -0.9f);
+	shaders[0].unbind();
 	
 	glPopMatrix();
 }
