@@ -30,6 +30,7 @@ using namespace std;
 /* OpenGL libraries */
 #ifdef __APPLE__
 #include <GLUT/glut.h>
+#include <OpenGL/glext.h>
 #define PATH "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/"
 
 #else
@@ -40,7 +41,9 @@ using namespace std;
 #define PATH "paperplane\\"
 
 #else
+#include <GL/gl.h>
 #include <GL/glut.h>
+#include <GL/glext.h>
 #define PATH ""
 
 #endif

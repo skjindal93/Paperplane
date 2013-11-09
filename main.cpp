@@ -107,6 +107,20 @@ void initConstants()	{
 
 	tosave = 0;
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
+	
+	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
+	if(img != NULL)
+		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
+	
+	plane = (*readOBJ(string(PATH) + "plane.obj"))[0];
+	plane.load();
+	plane.save = true;
+	
+	star = (*readOBJ(string(PATH) + "star.obj"))[0];
+	star.load();
+	
+	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
+
 }
 
 /////////////////////////////////////////////////////////////
@@ -168,22 +182,7 @@ void GLInit()	{
 	glFogi(GL_FOG_MODE, GL_EXP2);
 	glFogfv(GL_FOG_COLOR, glm::value_ptr(glm::vec4(glm::vec3(0.8f), 1.0f)));
 	glFogf(GL_FOG_DENSITY, 0.0015f);
-	
-	cout << "Reading terrain..\n";
-	
-	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
-	if(img != NULL)
-		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
-	cout << "Terrain loaded!\n";
-	
-	plane = (*readOBJ(string(PATH) + "plane.obj"))[0];
-	plane.load();
-	plane.save = true;
-	
-	star = (*readOBJ(string(PATH) + "star.obj"))[0];
-	star.load();
-	
-	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
+
 }
 
 // glut's window resize function
@@ -602,7 +601,6 @@ int main(int argc, char * argv[])		{
 	glutInitWindowSize( winW, winH );
 	glutCreateWindow( "PaperPlane 3D" );
 	
-	
 	//initialize constants
 	initConstants();
 
@@ -625,7 +623,7 @@ int main(int argc, char * argv[])		{
 	glutMotionFunc(dragFunc);
 	// Hover
 	glutPassiveMotionFunc(hoverFunc);
-	
+
 	glutTimerFunc(0, iter, 0);
 	
 	// Start the main loop.  glutMainLoop never returns.
