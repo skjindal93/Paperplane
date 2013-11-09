@@ -51,7 +51,7 @@ GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
 
-void initConstants()	{
+void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
 	zoom = 1.0f;
 	
@@ -108,26 +108,6 @@ void initConstants()	{
 
 	tosave = 0;
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
-	
-	// Initialising the shader with the file names and then pushing into the vector somehow doesn't work. :-/
-	for(int i = 0; i < 1; ++i)	{
-		Shader s;
-		shaders.push_back(s);
-	}
-	shaders[0].init(string(PATH) + "vertex.glsl", string(PATH) + "fragment.glsl");
-	
-	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
-	if(img != NULL)
-		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
-	
-	plane = (*readOBJ(string(PATH) + "plane.obj"))[0];
-	plane.load();
-	plane.save = true;
-	
-	star = (*readOBJ(string(PATH) + "star.obj"))[0];
-	star.load();
-	
-	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
 
 }
 
@@ -193,6 +173,31 @@ void GLInit()	{
 
 }
 
+void postGLInit()	{
+	// Initialising the shader with the file names and then pushing into the vector somehow doesn't work. :-/
+#ifndef __APPLE__
+	glewInit();
+#endif
+	for(int i = 0; i < 1; ++i)	{
+		Shader s;
+		shaders.push_back(s);
+	}
+	shaders[0].init(string(PATH) + "vertex.glsl", string(PATH) + "fragment.glsl");
+	
+	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
+	if(img != NULL)
+		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
+	
+	plane = (*readOBJ(string(PATH) + "plane.obj"))[0];
+	plane.load();
+	plane.save = true;
+	
+	star = (*readOBJ(string(PATH) + "star.obj"))[0];
+	star.load();
+	
+	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
+}
+
 // glut's window resize function
 // w, h - width and height of the window in pixels.
 void resizeWindow(int w, int h)	{
@@ -250,7 +255,7 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 	switch (key) {
 		case 'r':
 		case 'R':
-			initConstants();
+			preGLInit();
 			resizeWindow(winW, winH);
 			break;
 		
@@ -612,10 +617,11 @@ int main(int argc, char * argv[])		{
 	glutCreateWindow( "PaperPlane 3D" );
 	
 	//initialize constants
-	initConstants();
-
+	preGLInit();
 	// Initialize OpenGL.
 	GLInit();
+	//initialize things which need GLInit before
+	postGLInit();
 	
 	// Callback for graphics image redrawing
 	glutDisplayFunc( drawScene );
