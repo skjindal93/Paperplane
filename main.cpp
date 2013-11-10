@@ -134,8 +134,8 @@ void GLInit()	{
 //	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);    // Make round points, not square points
 //	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
 //												//	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
-//												//	glEnable(GL_BLEND);
-//												//	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	glEnable(GL_MULTISAMPLE);
 	glDisable(GL_CULL_FACE);
@@ -369,10 +369,10 @@ void setFrameBuffer(GLuint fbuf)	{
 void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
 	glGenTextures(1, color_tex);
 	glBindTexture(GL_TEXTURE_2D, *color_tex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	
 	//NULL means reserve texture memory, but texels are undefined
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, winW, winH, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
@@ -422,7 +422,7 @@ void drawStar(float rotOffset = 0.0f)	{
 	glPopMatrix();
 }
 
-void drawStars()	{
+void drawStars(float scale = 1.0f)	{
 	glPushMatrix();
 	
 	for(int i = 0; i < STAR_COUNT; ++i)	{
@@ -434,9 +434,11 @@ void drawStars()	{
 		}
 		if(stars[i][3] >= 0.0f)	{
 			
+			glPushMatrix();
 			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
+			glScalef(scale, scale, scale);
 			drawStar(stars[i][3]);
-			glTranslatef(-stars[i][0], -stars[i][1], -stars[i][2]);
+			glPopMatrix();
 			
 			if(fabs(planeX - stars[i][0]) < 2.0f && fabs(planeY - stars[i][1]) < 2.0f && fabs(curZ - 5.0f - stars[i][2]) < 1.0f)	{
 				score ++;
@@ -484,32 +486,6 @@ void drawStatics()	{
 		terr->render(height, -size, starting, 4.0f);
 	
 	glPopAttrib();
-	glPopMatrix();
-	glPushMatrix();
-	
-	
-	// Render fixed functionality into a texture and use in fragment shader
-	// Awesome idea
-	GLuint stars_tex, fbo, depthbuf;
-	getFBO(&stars_tex, &fbo, &depthbuf);
-	setFrameBuffer(fbo);
-	drawStars();
-
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, stars_tex);
-	
-	shaders[0].bind();
-	GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
-	glUniform1i(fragtex, 0);
-	
-	drawStars();
-	shaders[0].unbind();
-	
-	glDeleteTextures(1, &stars_tex);
-	glDeleteFramebuffers(1, &fbo);
-	glDeleteRenderbuffersEXT(1, &depthbuf);
-	
 	glPopMatrix();
 	glPushMatrix();
 	
@@ -592,33 +568,48 @@ void drawMoving()	{
 
 // glut's Main Display Function
 void drawScene()	{
-	// hack to save plane's modelview before obstacles'
-	drawPlane();
-	
 	setFrameBuffer(0);
 	collide = false;
-
-//	UP vector rotation. TODO: Turn on?
-//	glm::vec4 UP(0.0f, 1.0f, 0.0f, 1.0f);
-//	glm::mat4x4 rot(1.0f);
-//	rot = glm::rotate(rot, (float)pow(abs(vx), 0.6) * (vx < 0 ? 1.0f : -1.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-//	UP = rot * UP;
-//	up[0] = UP[0];
-//	up[1] = UP[1];
-//	up[2] = UP[2];
-		
-	//glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 50.0f, curZ-20.0f)));
 	
-	drawStatics();
 	glTranslatef(0.0f, 0.0f, curZ);
+	drawPlane();
 	drawMoving();
+	glTranslatef(0.0f, 0.0f, -curZ);
+	drawStatics();
+	
+	// Stars
+	glPushMatrix();
+	// Render fixed functionality into a texture and use in fragment shader
+	// Awesome idea
+	GLuint stars_tex, fbo, depthbuf;
+	getFBO(&stars_tex, &fbo, &depthbuf);
+	setFrameBuffer(fbo);
+	drawStars();
+
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, stars_tex);
+	
+	shaders[0].bind();
+	GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
+	GLint w = glGetUniformLocation(shaders[0].pID, "w");
+	GLint h = glGetUniformLocation(shaders[0].pID, "h");
+	glUniform1i(fragtex, 0);
+	glUniform1i(w, winW);
+	glUniform1i(h, winH);
+	
+	drawStars(1.25);
+	shaders[0].unbind();
+	
+	glDeleteTextures(1, &stars_tex);
+	glDeleteFramebuffers(1, &fbo);
+	glDeleteRenderbuffersEXT(1, &depthbuf);
+	glPopMatrix();
+	
 
 //	glAccum(GL_MULT, 0.5);
 //	glAccum(GL_ACCUM, 0.5);
 //	glAccum(GL_RETURN, 1.0);
-	
-	// not blurring the plane
-	drawPlane();
 	
 	// TODO: Uncomment the code below to blur plane partially.
 //	GLfloat alpha = 0.2, beta = 0.5;
