@@ -18,6 +18,10 @@ struct Obstacle{
 	Object *obj;
 };
 
+bool zcomparator(glm::vec4 a, glm::vec4 b)	{
+	return a.z > b.z;
+}
+
 void iter(int);
 
 /////////////////////////////////////////////////////////////
@@ -39,7 +43,7 @@ Object plane, star;
 Material terrMaterial;
 GLuint bgTex;
 #define STAR_COUNT 7
-glm::vec4 stars[STAR_COUNT];
+vector<glm::vec4> stars(STAR_COUNT);
 #define OBJECT_COUNT 5
 vector<Obstacle*> obstaclesList;
 vector<Object> *allObjects;
@@ -141,7 +145,7 @@ void GLInit()	{
 	glDisable(GL_CULL_FACE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to transparent black
+	glClearColor(1.0f, 1.0f, 1.0f, 0.0f); // Clear the background of our window to transparent white (helps with glow)
 	
 	glEnable(GL_LIGHTING); //Enable lighting
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, glm::value_ptr(glm::vec4(ambient, 1.0f)));
@@ -395,6 +399,8 @@ void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
 		*color_tex = 0;
 		glDeleteFramebuffers(1, fb);
 		*fb = 0;
+		glDeleteRenderbuffersEXT(1, depth_rb);
+		*depth_rb = 0;
 	}
 }
 
@@ -422,31 +428,63 @@ void drawStar(float rotOffset = 0.0f)	{
 	glPopMatrix();
 }
 
-void drawStars(float scale = 1.0f)	{
+void drawStars()	{
 	glPushMatrix();
 	
-	for(int i = 0; i < STAR_COUNT; ++i)	{
-		if(stars[i][2] > curZ)	{
-			stars[i][0] = maxX * (randf() - 0.5);
-			stars[i][1] = maxY * (randf() - 0.5);
-			stars[i][2] -= stargap * STAR_COUNT;
-			stars[i][3] = randf();
-		}
+	GLuint stars_tex, fbo, depthbuf;
+	getFBO(&stars_tex, &fbo, &depthbuf);
+	
+	if(stars[0][2] > curZ)	{
+		stars[0].x = maxX * (randf() - 0.5);
+		stars[0].y = maxY * (randf() - 0.5);
+		stars[0].z -= stargap * STAR_COUNT;
+		stars[0][3] = randf();
+	}
+	
+	sort(stars.begin(), stars.end(), zcomparator);
+	
+	if(fabs(planeX - stars[0].x) < 2.0f && fabs(planeY - stars[0].y) < 2.0f && fabs(curZ - 5.0f - stars[0].z) < 1.0f)	{
+		score ++;
+		stars[0][3] = -1.0f;
+	}
+	
+	for(int i = STAR_COUNT - 1; i >= 0; i--)	{
 		if(stars[i][3] >= 0.0f)	{
 			
+			glClearColor(0.7, 0.7, 0.2, 0.0);
+			setFrameBuffer(fbo);
+			
+			glPushMatrix();
+			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
+			drawStar(stars[i][3]);
+			glPopMatrix();
+			
+			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, stars_tex);
+			
+			shaders[0].bind();
+			GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
+			GLint w = glGetUniformLocation(shaders[0].pID, "w");
+			GLint h = glGetUniformLocation(shaders[0].pID, "h");
+			glUniform1i(fragtex, 0);
+			glUniform1i(w, winW);
+			glUniform1i(h, winH);
+			
+			GLfloat scale = 2.0;
 			glPushMatrix();
 			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
 			glScalef(scale, scale, scale);
 			drawStar(stars[i][3]);
 			glPopMatrix();
-			
-			if(fabs(planeX - stars[i][0]) < 2.0f && fabs(planeY - stars[i][1]) < 2.0f && fabs(curZ - 5.0f - stars[i][2]) < 1.0f)	{
-				score ++;
-				stars[i][3] = -1.0f;
-			}
+
+			shaders[0].unbind();
 		}
 	}
-	
+
+	glDeleteTextures(1, &stars_tex);
+	glDeleteFramebuffers(1, &fbo);
+	glDeleteRenderbuffersEXT(1, &depthbuf);
 	glPopMatrix();
 }
 
@@ -568,6 +606,7 @@ void drawMoving()	{
 
 // glut's Main Display Function
 void drawScene()	{
+	glClearColor(0.0, 0.0, 0.0, 0.0);
 	setFrameBuffer(0);
 	collide = false;
 	
@@ -581,29 +620,7 @@ void drawScene()	{
 	glPushMatrix();
 	// Render fixed functionality into a texture and use in fragment shader
 	// Awesome idea
-	GLuint stars_tex, fbo, depthbuf;
-	getFBO(&stars_tex, &fbo, &depthbuf);
-	setFrameBuffer(fbo);
 	drawStars();
-
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, stars_tex);
-	
-	shaders[0].bind();
-	GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
-	GLint w = glGetUniformLocation(shaders[0].pID, "w");
-	GLint h = glGetUniformLocation(shaders[0].pID, "h");
-	glUniform1i(fragtex, 0);
-	glUniform1i(w, winW);
-	glUniform1i(h, winH);
-	
-	drawStars(1.25);
-	shaders[0].unbind();
-	
-	glDeleteTextures(1, &stars_tex);
-	glDeleteFramebuffers(1, &fbo);
-	glDeleteRenderbuffersEXT(1, &depthbuf);
 	glPopMatrix();
 	
 
