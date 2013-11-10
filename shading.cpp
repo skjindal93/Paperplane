@@ -50,7 +50,7 @@ void Shader::init(string vertFile, string fragFile)	{
 		vID = glCreateShader(GL_VERTEX_SHADER);
 		char* vShader = readFile(vertFile); int vLen = (int)strlen(vShader);
 		
-		glShaderSource(vID, 1, &vShader, &vLen);
+		glShaderSource(vID, 1, (const char**)&vShader, &vLen);
 		glCompileShader(vID);
 		
 		log = getShaderLog(vID);
@@ -69,7 +69,7 @@ void Shader::init(string vertFile, string fragFile)	{
 		fID = glCreateShader(GL_FRAGMENT_SHADER);
 		char* fShader = readFile(fragFile); int fLen = (int)strlen(fShader);
 		
-		glShaderSource(fID, 1, &fShader, &fLen);
+		glShaderSource(fID, 1, (const char**)&fShader, &fLen);
 		glCompileShader(fID);
 		
 		log = getShaderLog(fID);

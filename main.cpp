@@ -141,7 +141,7 @@ void GLInit()	{
 	glDisable(GL_CULL_FACE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to white
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // Clear the background of our window to transparent black
 	
 	glEnable(GL_LIGHTING); //Enable lighting
 	glLightModelfv(GL_LIGHT_MODEL_AMBIENT, glm::value_ptr(glm::vec4(ambient, 1.0f)));
@@ -182,7 +182,7 @@ void postGLInit()	{
 		Shader s;
 		shaders.push_back(s);
 	}
-	shaders[0].init(string(PATH) + "vertex.glsl", string(PATH) + "fragment.glsl");
+	shaders[0].init(string(PATH) + "tex.vs", string(PATH) + "glowtex.fs");
 	
 	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
 	if(img != NULL)
@@ -222,7 +222,7 @@ void resizeWindow(int w, int h)	{
 				   1.0f, //(double)w / (double)h, // Aspect
 				   0.5f,                // near-clipping
 				   2000.0);               // far-clipping
-	
+	glMatrixMode(GL_MODELVIEW);
 }
 
 void pause()	{
@@ -353,16 +353,58 @@ void dragFunc(int x, int y)	{
 /////////////////// Main Draw Functions /////////////////////
 /////////////////////////////////////////////////////////////
 
+void setFrameBuffer(GLuint fbuf)	{
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbuf);
+	resizeWindow(winW, winH);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the rendering window
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
+	
+	up = glm::normalize(up);
+	gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
+}
+
+// generate an FBO
+void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
+	glGenTextures(1, color_tex);
+	glBindTexture(GL_TEXTURE_2D, *color_tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
+	//NULL means reserve texture memory, but texels are undefined
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, winW, winH, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+	
+	glGenFramebuffers(1, fb);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, *fb);
+	
+	//Attach 2D texture to this FBO
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, *color_tex, 0);
+	
+	glGenRenderbuffersEXT(1, depth_rb);
+	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, *depth_rb);
+	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, winW, winH);
+	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, *depth_rb);
+	
+	GLenum status;
+	status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+	if(status != GL_FRAMEBUFFER_COMPLETE_EXT)	{
+		glDeleteTextures(1, color_tex);
+		*color_tex = 0;
+		glDeleteFramebuffers(1, fb);
+		*fb = 0;
+	}
+}
 
 void drawPlane()	{
 	glPushMatrix();
 	
-	shaders[0].bind();
 	glTranslatef(planeX, planeY, -5.0f);
 	glRotatef(vx * 1.5, 0.0f, 0.0f, 1.0f);
 	glRotatef(10.0f, 1.0f, 0.0f, 0.0f);
 	plane.render(0.5f, 0.3f, -0.9f);
-	shaders[0].unbind();
 	
 	glPopMatrix();
 }
@@ -374,7 +416,34 @@ void drawStar(float rotOffset = 0.0f)	{
 	glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
 	glRotatef(360.0f*((double)((frameCount/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
 	glScalef(0.5f, 0.75f, 0.5f);
+	
 	star.render();
+		
+	glPopMatrix();
+}
+
+void drawStars()	{
+	glPushMatrix();
+	
+	for(int i = 0; i < STAR_COUNT; ++i)	{
+		if(stars[i][2] > curZ)	{
+			stars[i][0] = maxX * (randf() - 0.5);
+			stars[i][1] = maxY * (randf() - 0.5);
+			stars[i][2] -= stargap * STAR_COUNT;
+			stars[i][3] = randf();
+		}
+		if(stars[i][3] >= 0.0f)	{
+			
+			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
+			drawStar(stars[i][3]);
+			glTranslatef(-stars[i][0], -stars[i][1], -stars[i][2]);
+			
+			if(fabs(planeX - stars[i][0]) < 2.0f && fabs(planeY - stars[i][1]) < 2.0f && fabs(curZ - 5.0f - stars[i][2]) < 1.0f)	{
+				score ++;
+				stars[i][3] = -1.0f;
+			}
+		}
+	}
 	
 	glPopMatrix();
 }
@@ -418,26 +487,31 @@ void drawStatics()	{
 	glPopMatrix();
 	glPushMatrix();
 	
-	// Stars
-	for(int i = 0; i < STAR_COUNT; ++i)	{
-		if(stars[i][2] > curZ)	{
-			stars[i][0] = maxX * (randf() - 0.5);
-			stars[i][1] = maxY * (randf() - 0.5);
-			stars[i][2] -= stargap * STAR_COUNT;
-			stars[i][3] = randf();
-		}
-		if(stars[i][3] >= 0.0f)	{
+	
+	// Render fixed functionality into a texture and use in fragment shader
+	// Awesome idea
+	GLuint stars_tex, fbo, depthbuf;
+	getFBO(&stars_tex, &fbo, &depthbuf);
+	setFrameBuffer(fbo);
+	drawStars();
 
-			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
-			drawStar(stars[i][3]);
-			glTranslatef(-stars[i][0], -stars[i][1], -stars[i][2]);
-			
-			if(fabs(planeX - stars[i][0]) < 2.0f && fabs(planeY - stars[i][1]) < 2.0f && fabs(curZ - 5.0f - stars[i][2]) < 1.0f)	{
-				score ++;
-				stars[i][3] = -1.0f;
-			}
-		}
-	}
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, stars_tex);
+	
+	shaders[0].bind();
+	GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
+	glUniform1i(fragtex, 0);
+	
+	drawStars();
+	shaders[0].unbind();
+	
+	glDeleteTextures(1, &stars_tex);
+	glDeleteFramebuffers(1, &fbo);
+	glDeleteRenderbuffersEXT(1, &depthbuf);
+	
+	glPopMatrix();
+	glPushMatrix();
 	
 	//Objects
 	for(int j=0; j < OBJECT_COUNT; j++) {
@@ -518,10 +592,10 @@ void drawMoving()	{
 
 // glut's Main Display Function
 void drawScene()	{
+	// hack to save plane's modelview before obstacles'
 	drawPlane();
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the rendering window
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
+	
+	setFrameBuffer(0);
 	collide = false;
 
 //	UP vector rotation. TODO: Turn on?
@@ -532,11 +606,7 @@ void drawScene()	{
 //	up[0] = UP[0];
 //	up[1] = UP[1];
 //	up[2] = UP[2];
-	
-	up = glm::normalize(up);
-	gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
-	// Only now draw anything you want to.
-	
+		
 	//glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 50.0f, curZ-20.0f)));
 	
 	drawStatics();
