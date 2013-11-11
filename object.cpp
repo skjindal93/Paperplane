@@ -21,6 +21,7 @@ Material::~Material()	{
 }
 
 void Material::apply()	{
+	glColor4f(Kd.x, Kd.y, Kd.z, 1.0);
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, glm::value_ptr(glm::vec4(Ka, 1.0f)));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, glm::value_ptr(glm::vec4(Kd, 1.0f)));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, glm::value_ptr(glm::vec4(Ks, 1.0f)));

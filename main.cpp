@@ -54,6 +54,9 @@ bool collide;
 GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
+bool drawless;
+#define SHADOW_MAP_RATIO 2
+glm::vec3 lightpos, lightdir;
 
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -112,7 +115,9 @@ void preGLInit()	{
 
 	tosave = 0;
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
-
+	
+	drawless = false;
+	lightdir = lightpos = glm::vec3(-40.0f, 200.0f, 1.0f);
 }
 
 /////////////////////////////////////////////////////////////
@@ -155,15 +160,15 @@ void GLInit()	{
 	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
 	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(glm::vec4(diffuse, 1.0f)));
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
-	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, 1.0f, 0.0f)));
+	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0f)));
 	
-	glEnable(GL_LIGHT1); //Enable light #1
-	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
-	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
-	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
-	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
+//	glEnable(GL_LIGHT1); //Enable light #1
+//	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
+//	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
+//	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
+//	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
 	
-	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+//	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 	//glFrontFace(GL_CCW);
 	
@@ -183,11 +188,12 @@ void postGLInit()	{
 #ifndef __APPLE__
 	glewInit();
 #endif
-	for(int i = 0; i < 1; ++i)	{
+	for(int i = 0; i < 2; ++i)	{
 		Shader s;
 		shaders.push_back(s);
 	}
 	shaders[0].init(string(PATH) + "tex.vs", string(PATH) + "glowtex.fs");
+	shaders[1].init(string(PATH) + "shadow.vs", string(PATH) + "shadow.fs");
 	
 	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
 	if(img != NULL)
@@ -390,7 +396,7 @@ void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
 	
 	glGenRenderbuffersEXT(1, depth_rb);
 	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT, *depth_rb);
-	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT24, winW, winH);
+	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT, GL_DEPTH_COMPONENT, winW, winH);
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, *depth_rb);
 	
 	GLenum status;
@@ -433,7 +439,8 @@ void drawStars()	{
 	glPushMatrix();
 	
 	GLuint stars_tex, fbo, depthbuf;
-	getFBO(&stars_tex, &fbo, &depthbuf);
+	if(!drawless)
+		getFBO(&stars_tex, &fbo, &depthbuf);
 	
 	if(stars[0][2] > curZ)	{
 		stars[0].x = maxX * (randf() - 0.5);
@@ -444,7 +451,7 @@ void drawStars()	{
 	
 	sort(stars.begin(), stars.end(), zcomparator);
 	
-	if(fabs(planeX - stars[0].x) < 2.0f && fabs(planeY - stars[0].y) < 2.0f && fabs(curZ - 5.0f - stars[0].z) < 1.0f)	{
+	if(fabs(planeX - stars[0].x) < 2.0f && fabs(planeY - stars[0].y) < 2.0f && fabs(curZ - 5.0f - stars[0].z) < 1.0f && stars[0][3] >= 0.0f)	{
 		score ++;
 		stars[0][3] = -1.0f;
 	}
@@ -452,40 +459,46 @@ void drawStars()	{
 	for(int i = STAR_COUNT - 1; i >= 0; i--)	{
 		if(stars[i][3] >= 0.0f)	{
 			
-			glClearColor(0.7, 0.7, 0.2, 0.0);
-			setFrameBuffer(fbo);
+			if(!drawless)	{
+				glClearColor(0.7, 0.7, 0.2, 0.0);
+				setFrameBuffer(fbo);
+			}
 			
 			glPushMatrix();
 			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
 			drawStar(stars[i][3]);
 			glPopMatrix();
 			
-			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, stars_tex);
-			
-			shaders[0].bind();
-			GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
-			GLint w = glGetUniformLocation(shaders[0].pID, "w");
-			GLint h = glGetUniformLocation(shaders[0].pID, "h");
-			glUniform1i(fragtex, 0);
-			glUniform1i(w, winW);
-			glUniform1i(h, winH);
-			
-			GLfloat scale = 2.0;
-			glPushMatrix();
-			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
-			glScalef(scale, scale, scale);
-			drawStar(stars[i][3]);
-			glPopMatrix();
+			if(!drawless)	{
+				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, stars_tex);
+				
+				shaders[0].bind();
+				GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
+				GLint w = glGetUniformLocation(shaders[0].pID, "w");
+				GLint h = glGetUniformLocation(shaders[0].pID, "h");
+				glUniform1i(fragtex, 0);
+				glUniform1i(w, winW);
+				glUniform1i(h, winH);
+				
+				GLfloat scale = 2.0;
+				glPushMatrix();
+				glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
+				glScalef(scale, scale, scale);
+				drawStar(stars[i][3]);
+				glPopMatrix();
 
-			shaders[0].unbind();
+				shaders[0].unbind();
+			}
 		}
 	}
 
-	glDeleteTextures(1, &stars_tex);
-	glDeleteFramebuffers(1, &fbo);
-	glDeleteRenderbuffersEXT(1, &depthbuf);
+	if(!drawless)	{
+		glDeleteTextures(1, &stars_tex);
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteRenderbuffersEXT(1, &depthbuf);
+	}
 	glPopMatrix();
 }
 
@@ -519,7 +532,8 @@ void drawStatics()	{
 	// What fraction of terrain are we currently on
 	float starting = (-curZ - size * p) / size;
 
-	terrMaterial.apply();
+	if(!drawless)
+		terrMaterial.apply();
 	
 	if(terr != NULL)
 		terr->render(height, -size, starting, 4.0f);
@@ -546,16 +560,16 @@ void drawStatics()	{
 			tosave %= OBJECT_COUNT;
 		}
 		else {
-			if (tosave == j)
+			if (!drawless && tosave == j)
 				obs->obj->save = true;
 			
 			drawObstacle(obs);
 			
-			if (obs->obj->save)
+			if (!drawless && obs->obj->save)	{
 				collide = collide || plane.collision(obs->obj);
-
-			delete[] obs->obj->modelView;
-			obs->obj->modelView = NULL;
+				delete[] obs->obj->modelView;
+				obs->obj->modelView = NULL;
+			}
 
 			obs->obj->save = false;
 		}
@@ -573,11 +587,15 @@ void drawMoving()	{
 	glTranslatef(0.0f, 350.0f, -1000.0f);
 	glScalef(700.0f, 700.0f, 1.0f);
 
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, bgTex);
+	if(!drawless)	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, bgTex);
+	}
 	
 	glBegin(GL_TRIANGLES);
-	glNormal3f(0.0f, 0.0f, 1.0f);
+
+	if(!drawless)
+		glNormal3f(0.0f, 0.0f, 1.0f);
 	
 	glTexCoord2f(1.0f, -1.0f);
 	glVertex3f(1.0f, 1.0f, 0.0f);
@@ -599,7 +617,8 @@ void drawMoving()	{
 	
 	glEnd();
 	
-	glDisable(GL_TEXTURE_2D);
+	if(!drawless)
+		glDisable(GL_TEXTURE_2D);
 	
 	glPopMatrix();
 	glPopAttrib();
@@ -607,9 +626,7 @@ void drawMoving()	{
 
 // glut's Main Display Function
 void drawScene()	{
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-	setFrameBuffer(0);
-	collide = false;
+	glPushMatrix();
 	
 	glTranslatef(0.0f, 0.0f, curZ);
 	drawPlane();
@@ -618,31 +635,166 @@ void drawScene()	{
 	drawStatics();
 	drawStars();
 	
+	glPopMatrix();
+}
 
-//	glAccum(GL_MULT, 0.5);
-//	glAccum(GL_ACCUM, 0.5);
-//	glAccum(GL_RETURN, 1.0);
+void shadowInit(GLuint *depth, GLuint *fbo)	{
+	int shadowMapWidth = winW * SHADOW_MAP_RATIO;
+	int shadowMapHeight = winH * SHADOW_MAP_RATIO;
+	
+	GLenum FBOstatus;
+	
+	// Try to use a texture depth component
+	glGenTextures(1, depth);
+	glBindTexture(GL_TEXTURE_2D, *depth);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	
+	// Remove artifact on the edges of the shadowmap
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
+	
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowMapWidth, shadowMapHeight, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	
+	// create a framebuffer object
+	glGenFramebuffersEXT(1, fbo);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, *fbo);
+	
+	// Instruct openGL that we won't bind a color texture with the currently bound FBO
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	
+	// attach the texture to FBO depth attachment point
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,GL_TEXTURE_2D, *depth, 0);
+	
+	// check FBO status
+	FBOstatus = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
+	if(FBOstatus != GL_FRAMEBUFFER_COMPLETE_EXT)	{
+		cerr << "GL_FRAMEBUFFER_COMPLETE_EXT failed, CANNOT use FBO." << endl;
+		glDeleteTextures(1, depth);
+		*depth = 0;
+		glDeleteFramebuffers(1, fbo);
+		*fbo = 0;
+	}
+	
+	// switch back to window-system-provided framebuffer
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+}
+
+void display()	{
+	
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	setFrameBuffer(0);
+	collide = false;
+	
+	drawless = true;
+	glDisable(GL_LIGHTING);
+	glDisable(GL_FOG);
+	glDisable(GL_BLEND);
+	glShadeModel(GL_FLAT);
+	
+	GLuint depthBuf, fbo;
+	// TODO: don't generate new ones everytime.
+	shadowInit(&depthBuf, &fbo);
+	
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbo);
+	glViewport(0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(65, 1.0f, 1.0f, 2000.0f);
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(lightpos.x, lightpos.y, lightpos.z, lightpos.x - lightdir.x, lightpos.y - lightdir.y, lightpos.z - lightdir.z, 0, 1, 0);
+	drawScene();
+	
+	GLfloat modelView[16];
+	GLfloat projection[16];
+		
+	// Moving from unit cube [-1,1] to [0,1]
+	const GLdouble bias[16] = {
+		0.5, 0.0, 0.0, 0.0,
+		0.0, 0.5, 0.0, 0.0,
+		0.0, 0.0, 0.5, 0.0,
+		0.5, 0.5, 0.5, 1.0};
+	
+	// Grab modelview and transformation matrices
+	glGetFloatv(GL_MODELVIEW_MATRIX, modelView);
+	glGetFloatv(GL_PROJECTION_MATRIX, projection);
+	
+	
+	glMatrixMode(GL_TEXTURE);
+	glActiveTextureARB(GL_TEXTURE7);
+	
+	glLoadIdentity();
+	glLoadMatrixd(bias);
+	
+	// concatating all matrices into one.
+	glMultMatrixf (projection);
+	glMultMatrixf (modelView);
+	
+	// Go back to normal matrix mode
+	glMatrixMode(GL_MODELVIEW);
+	
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glViewport(0, 0, winW, winH);
+	
+	drawless = false;
+	glEnable(GL_LIGHTING);
+	glEnable(GL_FOG);
+	glEnable(GL_BLEND);
+	glShadeModel(GL_SMOOTH);
+	
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	
+	shaders[1].bind();
+	GLuint shadowmapuniform = glGetUniformLocation(shaders[1].pID, "ShadowMap");
+	glUniform1i(shadowmapuniform, 7);
+	glActiveTextureARB(GL_TEXTURE7);
+	glBindTexture(GL_TEXTURE_2D, depthBuf);
+	
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(65, 1.0f, 1.0f, 2000.0f);
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(eye.x, eye.y, eye.z, center.x, center.y, center.z, 0, 1, 0);
+	drawScene();
+	
+	shaders[1].unbind();
+	
+	//	glAccum(GL_MULT, 0.5);
+	//	glAccum(GL_ACCUM, 0.5);
+	//	glAccum(GL_RETURN, 1.0);
 	
 	// TODO: Uncomment the code below to blur plane partially.
-//	GLfloat alpha = 0.2, beta = 0.5;
-//	glAccum(GL_MULT, 1.0f - alpha);
-//	glAccum(GL_ACCUM, alpha);
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//	
-//	drawPlane();
-//	glAccum(GL_ACCUM, beta * alpha);
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//	
-//	glAccum(GL_RETURN, 1.0/(1.0 - beta));
-//	drawPlane();
-//	
-//	// TODO: Now multiply the frame buffer by `beta` (or beta * alpha : check).
+	//	GLfloat alpha = 0.2, beta = 0.5;
+	//	glAccum(GL_MULT, 1.0f - alpha);
+	//	glAccum(GL_ACCUM, alpha);
+	//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//
+	//	drawPlane();
+	//	glAccum(GL_ACCUM, beta * alpha);
+	//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//
+	//	glAccum(GL_RETURN, 1.0/(1.0 - beta));
+	//	drawPlane();
+	//
+	//	// TODO: Now multiply the frame buffer by `beta` (or beta * alpha : check).
 	
 	if(collide)	{
 		cout << "Hawwwwwww!\n";
 		pause();
 	}
-
+	
 	glutSwapBuffers();
 	frameCount++;
 	
@@ -655,6 +807,8 @@ void drawScene()	{
 		lastCount = frameCount;
 	}
 	
+	glDeleteTextures(1, &depthBuf);
+	glDeleteFramebuffers(1, &fbo);
 }
 
 void iter(int dummy)	{
@@ -697,7 +851,7 @@ int main(int argc, char * argv[])		{
 	postGLInit();
 	
 	// Callback for graphics image redrawing
-	glutDisplayFunc( drawScene );
+	glutDisplayFunc( display );
 	
 	// Set up callback functions for key presses
 	glutKeyboardFunc(keyboardFunc);
