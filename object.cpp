@@ -301,36 +301,49 @@ bool lineWithPlane(glm::vec3 plane[3], glm::vec3 x, glm::vec3 y){
 }
 
 bool triangleIntersect(glm::vec4 a[3], glm::vec4 b[3]){
-	GLfloat minXa,minYa,minZa,maxXa,maxYa,maxZa;
-	GLfloat minXb,minYb,minZb,maxXb,maxYb,maxZb;
+	GLfloat MAX, MIN;
 	glm::vec3 TriA[3], TriB[3];
 
 	for (int i=0; i<3; i ++){
 		a[i] /= a[i][3];
 		b[i] /= b[i][3];
 	}
-	minXa = min( min( a[0][0],a[1][0] ),a[2][0] );
-	minYa = min( min( a[0][1],a[1][1] ),a[2][1] );
-	minZa = min( min( a[0][2],a[1][2] ),a[2][2] );
 	
-	maxXa = max( max( a[0][0],a[1][0] ),a[2][0] );
-	maxYa = max( max( a[0][1],a[1][1] ),a[2][1] );
-	maxZa = max( max( a[0][2],a[1][2] ),a[2][2] );
+	MAX = max( max( a[0][2],a[1][2] ),a[2][2] );
+	MIN = min( min( b[0][2],b[1][2] ),b[2][2] );
 	
-	minXb = min( min( b[0][0],b[1][0] ),b[2][0] );
-	minYb = min( min( b[0][1],b[1][1] ),b[2][1] );
-	minZb = min( min( b[0][2],b[1][2] ),b[2][2] );
-	
-	maxXb = max( max( b[0][0],b[1][0] ),b[2][0] );
-	maxYb = max( max( b[0][1],b[1][1] ),b[2][1] );
-	maxZb = max( max( b[0][2],b[1][2] ),b[2][2] );
-	
-	if ( (maxXb < minXa || maxXa < minXb)
-		|| (maxYb < minYa || maxYa < minYb)
-		|| (maxZb < minZa || maxZa < minZb) )
-	{
+	if( MAX < MIN )
 		return false;
-	}
+	
+	MIN = min( min( a[0][2],a[1][2] ),a[2][2] );
+	MAX = max( max( b[0][2],b[1][2] ),b[2][2] );
+
+	if( MAX < MIN )
+		return false;
+	
+	MIN = min( min( a[0][0],a[1][0] ),a[2][0] );
+	MAX = max( max( b[0][0],b[1][0] ),b[2][0] );
+	
+	if( MAX < MIN )
+		return false;
+	
+	MAX = max( max( a[0][0],a[1][0] ),a[2][0] );
+	MIN = min( min( b[0][0],b[1][0] ),b[2][0] );
+	
+	if( MAX < MIN )
+		return false;
+	
+	MIN = min( min( a[0][1],a[1][1] ),a[2][1] );
+	MAX = max( max( b[0][1],b[1][1] ),b[2][1] );
+	
+	if( MAX < MIN )
+		return false;
+	
+	MIN = min( min( b[0][1],b[1][1] ),b[2][1] );
+	MAX = max( max( a[0][1],a[1][1] ),a[2][1] );
+	
+	if( MAX < MIN )
+		return false;
 	
 	for (int k=0; k<3; k++)	{
 		TriA[k] = glm::vec3(a[k][0],a[k][1],a[k][2]);

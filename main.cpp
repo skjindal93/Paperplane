@@ -132,12 +132,13 @@ void GLInit()	{
 	//	glPointSize(8);
 	//	glLineWidth(5);
     
-//	glEnable(GL_POINT_SMOOTH);
-//	glEnable(GL_LINE_SMOOTH);
-//	//	glEnable(GL_POLYGON_SMOOTH_HINT);
-//	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);    // Make round points, not square points
-//	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
-//												//	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
+	glEnable(GL_POINT_SMOOTH);
+	glEnable(GL_LINE_SMOOTH);
+	glEnable(GL_POLYGON_SMOOTH_HINT);
+	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);    // Make round points, not square points
+	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
+	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
+	
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
@@ -154,13 +155,13 @@ void GLInit()	{
 	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
 	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(glm::vec4(diffuse, 1.0f)));
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
-	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, 1.0f, 0.0f)));
+	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, 1.0f, 0.0f)));
 	
 	glEnable(GL_LIGHT1); //Enable light #1
 	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
 	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
 	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
-	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 20.0f, -2000.0f, 0.0f)));
+	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
 	
 	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
@@ -615,13 +616,7 @@ void drawScene()	{
 	drawMoving();
 	glTranslatef(0.0f, 0.0f, -curZ);
 	drawStatics();
-	
-	// Stars
-	glPushMatrix();
-	// Render fixed functionality into a texture and use in fragment shader
-	// Awesome idea
 	drawStars();
-	glPopMatrix();
 	
 
 //	glAccum(GL_MULT, 0.5);
