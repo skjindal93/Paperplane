@@ -119,7 +119,10 @@ void preGLInit()	{
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 	
 	drawless = false;
-	lightdir = lightpos = glm::vec3(-40.0f, 200.0f, 1.0f);
+	lightdir = lightpos = glm::vec3(-40.0f, 20.0f, 1.0f);
+
+	//lightdir = -glm::vec3(10.0f, -10.0f, -50.0f);
+	//lightpos = glm::vec3(-10.0f, 10.0f, 1.0f);
 }
 
 /////////////////////////////////////////////////////////////
@@ -270,8 +273,8 @@ void pause()	{
 	ypaused = yold;
 }
 
-void resume()	{
-	run = 1;
+void resume(int single = 0)	{
+	run = single ^ 1;
 	xold = xpaused;
 	yold = ypaused;
 	zoom = 1.0f;
@@ -279,7 +282,7 @@ void resume()	{
 	zoom = 1.0f;
 	resizeWindow(winW, winH);
 	center[0] = center[1] = eye[0] = eye[1] = 0.0f;
-	glutTimerFunc(1, iter, 0);
+	glutTimerFunc(1, iter, single);
 }
 
 
@@ -300,6 +303,10 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 		
 		case ' ':
 			run ? pause() : resume();
+			break;
+		
+		case 13:
+			run ? pause() : resume(1);
 			break;
 			
 		case 27:                                    // "27" is theEscape key
@@ -666,51 +673,6 @@ void drawScene()	{
 	glPopMatrix();
 }
 
-void shadowInit(GLuint *depth, GLuint *fbo)	{
-	int shadowMapWidth = winW * SHADOW_MAP_RATIO;
-	int shadowMapHeight = winH * SHADOW_MAP_RATIO;
-	
-	GLenum FBOstatus;
-	
-	// Try to use a texture depth component
-	glGenTextures(1, depth);
-	glBindTexture(GL_TEXTURE_2D, *depth);
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	
-	// Remove artifact on the edges of the shadowmap
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
-	
-	glTexImage2D( GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowMapWidth, shadowMapHeight, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	
-	// create a framebuffer object
-	glGenFramebuffersEXT(1, fbo);
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, *fbo);
-	
-	// Instruct openGL that we won't bind a color texture with the currently bound FBO
-	glDrawBuffer(GL_NONE);
-	glReadBuffer(GL_NONE);
-	
-	// attach the texture to FBO depth attachment point
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT,GL_TEXTURE_2D, *depth, 0);
-	
-	// check FBO status
-	FBOstatus = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
-	if(FBOstatus != GL_FRAMEBUFFER_COMPLETE_EXT)	{
-		cerr << "GL_FRAMEBUFFER_COMPLETE_EXT failed, CANNOT use FBO." << endl;
-		glDeleteTextures(1, depth);
-		*depth = 0;
-		glDeleteFramebuffers(1, fbo);
-		*fbo = 0;
-	}
-	
-	// switch back to window-system-provided framebuffer
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-}
-
 void display()	{
 	
 	//Calculate & save matrices
@@ -727,7 +689,7 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraView));
 	
 	glLoadIdentity();
-	gluPerspective(65.0f, 1.0f, 1.0f, 2000.0f);
+	gluPerspective(120.0f, 1.0f, 0.5f, 2000.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProj));
 	
 	glLoadIdentity();
@@ -744,62 +706,62 @@ void display()	{
 	setFrameBuffer(0);
 	collide = false;
 	
-//	drawless = true;
-//	glDisable(GL_LIGHTING);
-//	glDisable(GL_FOG);
-//	glDisable(GL_BLEND);
-//	glShadeModel(GL_FLAT);
-//	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-//	
-//	//First pass - from light's point of view
-//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//	
-//	glMatrixMode(GL_PROJECTION);
-//	glLoadMatrixf(glm::value_ptr(lightProj));
-//
-//	glMatrixMode(GL_MODELVIEW);
-//	glLoadMatrixf(glm::value_ptr(lightView));
-//
-//	//Use viewport the same size as the shadow map
-//	glViewport(0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
-//
-//	drawScene();
-//
-//	//Read the depth buffer into the shadow map texture
-//	glBindTexture(GL_TEXTURE_2D, shadowmap);
-//	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
-
-	//2nd pass - Draw from camera's point of view
-	drawless = false;
-	glEnable(GL_LIGHTING);
-	glEnable(GL_FOG);
-	glEnable(GL_BLEND);
-	glShadeModel(GL_SMOOTH);
-	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	drawless = true;
+	glDisable(GL_LIGHTING);
+	glDisable(GL_FOG);
+	glDisable(GL_BLEND);
+	glShadeModel(GL_FLAT);
+	glColorMask(1,1,1,1);
 	
-	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	//First pass - from light's point of view
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glViewport(wLo, hLo, wHi - wLo, hHi - hLo);
-	
+	glLoadMatrixf(glm::value_ptr(lightProj));
+
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(glm::value_ptr(cameraView));
+	glLoadMatrixf(glm::value_ptr(lightView));
 
-	glViewport(0, 0, winW, winH);
+	//Use viewport the same size as the shadow map
+	glViewport(0, 0, winW , winH );
 
-	//Use dim light to represent shadowed areas
-	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0)));
-	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
-	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(glm::vec4(diffuse, 1.0f)));
-	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
+	drawScene();
+
+	//Read the depth buffer into the shadow map texture
+	glBindTexture(GL_TEXTURE_2D, shadowmap);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, winW , winH );
+
+//	//2nd pass - Draw from camera's point of view
+//	drawless = false;
+//	glEnable(GL_LIGHTING);
+//	glEnable(GL_FOG);
+//	glEnable(GL_BLEND);
+//	glShadeModel(GL_SMOOTH);
+//	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+//	
+//	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+//	
+//	glMatrixMode(GL_PROJECTION);
+//	glLoadMatrixf(glm::value_ptr(cameraProj));
+//	
+//	glMatrixMode(GL_MODELVIEW);
+//	glLoadMatrixf(glm::value_ptr(cameraView));
+//
+//	glViewport(wLo, hLo, wHi - wLo, hHi - hLo);
+//
+//	//Use dim light to represent shadowed areas
+//	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0)));
 //	glLightfv(GL_LIGHT0, GL_AMBIENT, glm::value_ptr(glm::vec4(0.2, 0.2, 0.2, 1.0)));
 //	glLightfv(GL_LIGHT0, GL_DIFFUSE, glm::value_ptr(glm::vec4(0.2, 0.2, 0.2, 1.0)));
 //	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(0, 0, 0, 0)));
-
-	drawScene();
-	
-
+//
+//	drawScene();
+//	
+//	glPushMatrix();
+//	glTranslatef(lightpos.x, lightpos.y, lightpos.z);
+//	gluSphere(myQuadric, 2.0f, 50, 50);
+//	glPopMatrix();
+//
 //	//3rd pass
 //	//Draw with bright light
 //	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
@@ -815,7 +777,11 @@ void display()	{
 //							0.5f, 0.5f, 0.5f, 1.0f	);	//bias from [-1, 1] to [0, 1]
 //	glm::mat4 textureMatrix = biasMatrix * lightProj * lightView;
 //	glm::mat4 texTrans = glm::transpose(textureMatrix);
-//
+//	
+//	//Bind & enable shadow map texture
+//	glBindTexture(GL_TEXTURE_2D, shadowmap);
+//	glEnable(GL_TEXTURE_2D);
+//	
 //	//Set up texture coordinate generation.
 //	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
 //	glTexGenfv(GL_S, GL_EYE_PLANE, glm::value_ptr(texTrans[0]));
@@ -833,18 +799,14 @@ void display()	{
 //	glTexGenfv(GL_Q, GL_EYE_PLANE, glm::value_ptr(texTrans[3]));
 //	glEnable(GL_TEXTURE_GEN_Q);
 //
-//	//Bind & enable shadow map texture
-//	glBindTexture(GL_TEXTURE_2D, shadowmap);
-//	glEnable(GL_TEXTURE_2D);
-//
 //	//Enable shadow comparison
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE);
-//
-//	//Shadow comparison should be true (ie not in shadow) if r<=texture
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);
 //
 //	//Shadow comparison should generate an INTENSITY result
 //	glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
+//	
+//	//Shadow comparison should be true (ie not in shadow) if r<=texture
+//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
 //
 //	//Set alpha test to discard false comparisons
 //	glAlphaFunc(GL_GEQUAL, 0.99f);
@@ -901,8 +863,12 @@ void display()	{
 
 }
 
-void iter(int dummy)	{
+void iter(int single)	{
 	if(run)	{
+		curZ -= step;
+		lightpos.z = curZ + 6;
+		glutPostRedisplay();
+	} else if(single)	{
 		curZ -= step;
 		lightpos.z = curZ + 6;
 		glutPostRedisplay();
