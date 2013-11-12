@@ -23,6 +23,7 @@ bool zcomparator(glm::vec4 a, glm::vec4 b)	{
 }
 
 void iter(int);
+void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb);
 
 /////////////////////////////////////////////////////////////
 //////////////////////// Constants //////////////////////////
@@ -54,6 +55,7 @@ bool collide;
 GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
+GLuint stars_tex, fbo, depthbuf;
 
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -201,6 +203,8 @@ void postGLInit()	{
 	star.load();
 	
 	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
+
+	getFBO(&stars_tex, &fbo, &depthbuf);
 }
 
 // glut's window resize function
@@ -432,8 +436,7 @@ void drawStar(float rotOffset = 0.0f)	{
 void drawStars()	{
 	glPushMatrix();
 	
-	GLuint stars_tex, fbo, depthbuf;
-	getFBO(&stars_tex, &fbo, &depthbuf);
+	
 	
 	if(stars[0][2] > curZ)	{
 		stars[0].x = maxX * (randf() - 0.5);
@@ -483,9 +486,9 @@ void drawStars()	{
 		}
 	}
 
-	glDeleteTextures(1, &stars_tex);
-	glDeleteFramebuffers(1, &fbo);
-	glDeleteRenderbuffersEXT(1, &depthbuf);
+//	glDeleteTextures(1, &stars_tex);
+//	glDeleteFramebuffers(1, &fbo);
+//	glDeleteRenderbuffersEXT(1, &depthbuf);
 	glPopMatrix();
 }
 
