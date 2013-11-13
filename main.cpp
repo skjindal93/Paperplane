@@ -23,6 +23,7 @@ bool zcomparator(glm::vec4 a, glm::vec4 b)	{
 }
 
 void iter(int);
+void genDepthFBO(GLuint *fb, GLuint *depth, int w, int h);
 
 /////////////////////////////////////////////////////////////
 //////////////////////// Constants //////////////////////////
@@ -55,10 +56,10 @@ GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
 bool drawless;
-#define SHADOW_MAP_RATIO 2
+#define SHADOW_MAP_RATIO 1
 glm::vec3 lightpos, lightdir;
 glm::mat4 lightProj, lightView, cameraProj, cameraView;
-GLuint shadowmap;
+GLuint shadowmap, shadowFBO;
 
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -119,10 +120,9 @@ void preGLInit()	{
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 	
 	drawless = false;
-	lightdir = lightpos = glm::vec3(-40.0f, 20.0f, 1.0f);
+	lightpos = glm::vec3(-5.0f, 20.0f, 150.0f);
+	lightdir = -glm::vec3(5.0f, -15.0f, -200.0f);
 
-	//lightdir = -glm::vec3(10.0f, -10.0f, -50.0f);
-	//lightpos = glm::vec3(-10.0f, 10.0f, 1.0f);
 }
 
 /////////////////////////////////////////////////////////////
@@ -149,8 +149,8 @@ void GLInit()	{
 	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
 	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
 	
-	//glEnable(GL_BLEND);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	glEnable(GL_MULTISAMPLE);
 	glDisable(GL_CULL_FACE);
@@ -248,15 +248,6 @@ void postGLInit()	{
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_DEPTH_TEST);
 	
-	//Create the shadow map texture
-	glGenTextures(1, &shadowmap);
-	glBindTexture(GL_TEXTURE_2D, shadowmap);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	
 	//Use the color as the ambient and diffuse material
 	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
 	glEnable(GL_COLOR_MATERIAL);
@@ -265,6 +256,7 @@ void postGLInit()	{
 	glMaterialfv(GL_FRONT, GL_SPECULAR, glm::value_ptr(glm::vec4(1,1,1,1)));
 	glMaterialf(GL_FRONT, GL_SHININESS, 16.0f);
 	
+	genDepthFBO(&shadowFBO, &shadowmap, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
 }
 
 void pause()	{
@@ -412,7 +404,7 @@ void setFrameBuffer(GLuint fbuf)	{
 }
 
 // generate an FBO
-void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
+void genFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
 	glGenTextures(1, color_tex);
 	glBindTexture(GL_TEXTURE_2D, *color_tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -437,6 +429,7 @@ void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
 	GLenum status;
 	status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT);
 	if(status != GL_FRAMEBUFFER_COMPLETE_EXT)	{
+		cerr << "genFBO failed!" << endl;
 		glDeleteTextures(1, color_tex);
 		*color_tex = 0;
 		glDeleteFramebuffers(1, fb);
@@ -444,11 +437,64 @@ void getFBO(GLuint *color_tex, GLuint *fb, GLuint *depth_rb)	{
 		glDeleteRenderbuffersEXT(1, depth_rb);
 		*depth_rb = 0;
 	}
+	
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+}
+
+void genDepthFBO(GLuint *fb, GLuint *depth, int w, int h)	{
+	
+	//Create the shadow map texture
+	glGenTextures(1, depth);
+	glBindTexture(GL_TEXTURE_2D, *depth);
+	
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, w, h, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, glm::value_ptr(glm::vec4(0)));
+	
+	// Create a FBO
+	glGenFramebuffers(1, fb);
+	
+	// Bind the frame buffer to the curent context and tell openGL that
+	// the FBO won't be writing any color information and bind the texture ID
+	// to the texture component of the FBO
+	glBindFramebuffer(GL_FRAMEBUFFER, *fb);
+	
+	// Instruct openGL that we won't bind a color texture with the currently binded FBO
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	
+	// Set the texture to be at the depth attachment point of the FBO
+	glFramebufferTexture2D(
+						   GL_FRAMEBUFFER,
+						   GL_DEPTH_ATTACHMENT,
+						   GL_TEXTURE_2D,
+						   *depth,
+						   0);
+	
+	// check FBO status
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if( status != GL_FRAMEBUFFER_COMPLETE )	{
+		cerr << "genDepthFBO failed!" << endl;
+		glDeleteFramebuffers(1, fb);
+		*fb = 0;
+		glDeleteTextures(1, depth);
+		*depth = 0;
+
+	}
+	
+	// switch back to window-system-provided framebuffer
+	// and unbind the texture
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void drawPlane()	{
 	glPushMatrix();
 	
+	glColor3f(1.0,0.0,0.0);
 	glTranslatef(planeX, planeY, -5.0f);
 	glRotatef(vx * 1.5, 0.0f, 0.0f, 1.0f);
 	glRotatef(10.0f, 1.0f, 0.0f, 0.0f);
@@ -474,8 +520,7 @@ void drawStars()	{
 	glPushMatrix();
 	
 	GLuint stars_tex, fbo, depthbuf;
-	if(!drawless)
-		getFBO(&stars_tex, &fbo, &depthbuf);
+	genFBO(&stars_tex, &fbo, &depthbuf);
 	
 	if(stars[0][2] > curZ)	{
 		stars[0].x = maxX * (randf() - 0.5);
@@ -494,10 +539,8 @@ void drawStars()	{
 	for(int i = STAR_COUNT - 1; i >= 0; i--)	{
 		if(stars[i][3] >= 0.0f)	{
 			
-			if(!drawless)	{
-				glClearColor(0.7, 0.7, 0.2, 0.0);
-				setFrameBuffer(fbo);
-			}
+			glClearColor(0.7, 0.7, 0.2, 0.0);
+			setFrameBuffer(fbo);
 			
 			glPushMatrix();
 			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
@@ -529,11 +572,9 @@ void drawStars()	{
 		}
 	}
 
-	if(!drawless)	{
-		glDeleteTextures(1, &stars_tex);
-		glDeleteFramebuffers(1, &fbo);
-		glDeleteRenderbuffersEXT(1, &depthbuf);
-	}
+	glDeleteTextures(1, &stars_tex);
+	glDeleteFramebuffers(1, &fbo);
+	glDeleteRenderbuffersEXT(1, &depthbuf);
 	glPopMatrix();
 }
 
@@ -555,26 +596,29 @@ void drawObstacle(Obstacle *obs)	{
 }
 
 void drawStatics()	{
-	glPushMatrix();
-	glPushAttrib(GL_LIGHTING_BIT);
 	
-	// Endless Terrain
-	
-//	GLfloat size = 300.0f, height = 50.0f;
-//	int p = -curZ/size;
-//	glTranslatef(0.0f, -30.0f, -(size * p));
-//	
-//	// What fraction of terrain are we currently on
-//	float starting = (-curZ - size * p) / size;
-//
-//	if(!drawless)
-//		terrMaterial.apply();
-//	
-//	if(terr != NULL)
-//		terr->render(height, -size, starting, 4.0f);
-	
-	glPopAttrib();
-	glPopMatrix();
+	if(!drawless)	{
+		glPushMatrix();
+		glPushAttrib(GL_LIGHTING_BIT);
+		
+		// Endless Terrain
+		GLfloat size = 300.0f, height = 50.0f;
+		int p = -curZ/size;
+		glTranslatef(0.0f, -30.0f, -(size * p));
+		
+		// What fraction of terrain are we currently on
+		float starting = (-curZ - size * p) / size;
+
+		if(!drawless)
+			terrMaterial.apply();
+		
+		if(terr != NULL)
+			terr->render(height, -size, starting, 4.0f);
+
+		glPopAttrib();
+		glPopMatrix();
+
+	}
 	glPushMatrix();
 	
 	//Objects
@@ -622,10 +666,8 @@ void drawMoving()	{
 	glTranslatef(0.0f, 350.0f, -1000.0f);
 	glScalef(700.0f, 700.0f, 1.0f);
 
-	if(!drawless)	{
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, bgTex);
-	}
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, bgTex);
 	
 	glBegin(GL_TRIANGLES);
 
@@ -633,7 +675,7 @@ void drawMoving()	{
 		glNormal3f(0.0f, 0.0f, 1.0f);
 	
 	glTexCoord2f(1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 0.0f);
+	glVertex3f(1.0f, 1.0f, 1.0f);
 	
 	glTexCoord2f(1.0f, 1.0f);
 	glVertex3f(1.0f, -1.0f, 0.0f);
@@ -645,15 +687,14 @@ void drawMoving()	{
 	glVertex3f(-1.0f, -1.0f, 0.0f);
 	
 	glTexCoord2f(0.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, 0.0f);
+	glVertex3f(-1.0f, 1.0f, 1.0f);
 	
 	glTexCoord2f(1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 0.0f);
+	glVertex3f(1.0f, 1.0f, 1.0f);
 	
 	glEnd();
 	
-	if(!drawless)
-		glDisable(GL_TEXTURE_2D);
+	glDisable(GL_TEXTURE_2D);
 	
 	glPopMatrix();
 	glPopAttrib();
@@ -665,10 +706,11 @@ void drawScene()	{
 	
 	glTranslatef(0.0f, 0.0f, curZ);
 	drawPlane();
-	//drawMoving();
+	if(!drawless)	{
+		drawMoving();
+	}
 	glTranslatef(0.0f, 0.0f, -curZ);
 	drawStatics();
-	//drawStars();
 	
 	glPopMatrix();
 }
@@ -689,7 +731,7 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraView));
 	
 	glLoadIdentity();
-	gluPerspective(120.0f, 1.0f, 0.5f, 2000.0f);
+	glOrtho(-10.0f, 10.0f, -20.0f, 20.0f, 10.0f, 1000.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProj));
 	
 	glLoadIdentity();
@@ -703,7 +745,7 @@ void display()	{
 	
 	// Begin actual stuff
 	glClearColor(0.0, 0.0, 0.0, 0.0);
-	setFrameBuffer(0);
+	setFrameBuffer(shadowFBO);
 	collide = false;
 	
 	drawless = true;
@@ -711,7 +753,7 @@ void display()	{
 	glDisable(GL_FOG);
 	glDisable(GL_BLEND);
 	glShadeModel(GL_FLAT);
-	glColorMask(1,1,1,1);
+	glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 	
 	//First pass - from light's point of view
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -720,110 +762,118 @@ void display()	{
 	glLoadMatrixf(glm::value_ptr(lightProj));
 
 	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(glm::value_ptr(lightView));
+	glLoadIdentity();
+	// Don't use lightView, to avoid shadow acne
+	//	glLoadMatrixf(glm::value_ptr(lightView));
+	// Instead, let's move the light a little bit towards the center.
+	glm::vec3 _pos = lightpos + (3 * 1e-3f * lightdir);
+	gluLookAt(_pos.x, _pos.y, _pos.z,
+			  lightpos.x - lightdir.x, lightpos.y - lightdir.y, lightpos.z - lightdir.z,
+			  0.0f, 1.0f, 0.0f);
 
 	//Use viewport the same size as the shadow map
-	glViewport(0, 0, winW , winH );
+	glViewport(0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
 
 	drawScene();
 
 	//Read the depth buffer into the shadow map texture
-	glBindTexture(GL_TEXTURE_2D, shadowmap);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, winW , winH );
-
-//	//2nd pass - Draw from camera's point of view
-//	drawless = false;
-//	glEnable(GL_LIGHTING);
-//	glEnable(GL_FOG);
-//	glEnable(GL_BLEND);
-//	glShadeModel(GL_SMOOTH);
-//	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-//	
-//	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-//	
-//	glMatrixMode(GL_PROJECTION);
-//	glLoadMatrixf(glm::value_ptr(cameraProj));
-//	
-//	glMatrixMode(GL_MODELVIEW);
-//	glLoadMatrixf(glm::value_ptr(cameraView));
-//
-//	glViewport(wLo, hLo, wHi - wLo, hHi - hLo);
-//
-//	//Use dim light to represent shadowed areas
-//	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0)));
-//	glLightfv(GL_LIGHT0, GL_AMBIENT, glm::value_ptr(glm::vec4(0.2, 0.2, 0.2, 1.0)));
-//	glLightfv(GL_LIGHT0, GL_DIFFUSE, glm::value_ptr(glm::vec4(0.2, 0.2, 0.2, 1.0)));
-//	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(0, 0, 0, 0)));
-//
-//	drawScene();
-//	
-//	glPushMatrix();
-//	glTranslatef(lightpos.x, lightpos.y, lightpos.z);
-//	gluSphere(myQuadric, 2.0f, 50, 50);
-//	glPopMatrix();
-//
-//	//3rd pass
-//	//Draw with bright light
-//	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
-//	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(glm::vec4(diffuse, 1.0f)));
-//	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
-//
-//	//Calculate texture matrix for projection
-//	//This matrix takes us from eye space to the light's clip space
-//	//It is postmultiplied by the inverse of the current view matrix when specifying texgen
-//	glm::mat4 biasMatrix(	0.5f, 0.0f, 0.0f, 0.0f,
-//							0.0f, 0.5f, 0.0f, 0.0f,
-//							0.0f, 0.0f, 0.5f, 0.0f,
-//							0.5f, 0.5f, 0.5f, 1.0f	);	//bias from [-1, 1] to [0, 1]
-//	glm::mat4 textureMatrix = biasMatrix * lightProj * lightView;
-//	glm::mat4 texTrans = glm::transpose(textureMatrix);
-//	
-//	//Bind & enable shadow map texture
 //	glBindTexture(GL_TEXTURE_2D, shadowmap);
-//	glEnable(GL_TEXTURE_2D);
-//	
-//	//Set up texture coordinate generation.
-//	glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-//	glTexGenfv(GL_S, GL_EYE_PLANE, glm::value_ptr(texTrans[0]));
-//	glEnable(GL_TEXTURE_GEN_S);
-//
-//	glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-//	glTexGenfv(GL_T, GL_EYE_PLANE, glm::value_ptr(texTrans[1]));
-//	glEnable(GL_TEXTURE_GEN_T);
-//
-//	glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-//	glTexGenfv(GL_R, GL_EYE_PLANE, glm::value_ptr(texTrans[2]));
-//	glEnable(GL_TEXTURE_GEN_R);
-//
-//	glTexGeni(GL_Q, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
-//	glTexGenfv(GL_Q, GL_EYE_PLANE, glm::value_ptr(texTrans[3]));
-//	glEnable(GL_TEXTURE_GEN_Q);
-//
-//	//Enable shadow comparison
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);
-//
-//	//Shadow comparison should generate an INTENSITY result
-//	glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
-//	
-//	//Shadow comparison should be true (ie not in shadow) if r<=texture
-//	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
-//
-//	//Set alpha test to discard false comparisons
-//	glAlphaFunc(GL_GEQUAL, 0.99f);
-//	glEnable(GL_ALPHA_TEST);
-//
-//	drawScene();
-//
-//	//Disable textures and texgen
-//	glDisable(GL_TEXTURE_2D);
-//
-//	glDisable(GL_TEXTURE_GEN_S);
-//	glDisable(GL_TEXTURE_GEN_T);
-//	glDisable(GL_TEXTURE_GEN_R);
-//	glDisable(GL_TEXTURE_GEN_Q);
-//
-//	glDisable(GL_ALPHA_TEST);
+//	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
 
+	//2nd pass - Draw from camera's point of view
+	setFrameBuffer(0);
+	drawless = false;
+	glEnable(GL_LIGHTING);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_FOG);
+	glShadeModel(GL_SMOOTH);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	
+	glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+	
+	glMatrixMode(GL_PROJECTION);
+	glLoadMatrixf(glm::value_ptr(cameraProj));
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(glm::value_ptr(cameraView));
+
+	glViewport(wLo, hLo, wHi - wLo, hHi - hLo);
+
+	//Use dim light to represent shadowed areas
+	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0)));
+	glLightfv(GL_LIGHT0, GL_AMBIENT, glm::value_ptr(glm::vec4(0.2, 0.2, 0.2, 0.0)));
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, glm::value_ptr(glm::vec4(0.2, 0.2, 0.2, 1.0)));
+	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(0, 0, 0, 0)));
+
+	drawScene();
+
+	//3rd pass
+	//Draw with bright light
+	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
+	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(glm::vec4(diffuse, 1.0f)));
+	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
+
+	//Calculate texture matrix for projection
+	//This matrix takes us from eye space to the light's clip space
+	//It is postmultiplied by the inverse of the current view matrix when specifying texgen
+	glm::mat4 biasMatrix(	0.5f, 0.0f, 0.0f, 0.0f,
+							0.0f, 0.5f, 0.0f, 0.0f,
+							0.0f, 0.0f, 0.5f, 0.0f,
+							0.5f, 0.5f, 0.5f, 1.0f	);	//bias from [-1, 1] to [0, 1]
+	glm::mat4 textureMatrix = biasMatrix * lightProj * lightView;
+	glm::mat4 texTrans = glm::transpose(textureMatrix);
+	
+	glActiveTexture(GL_TEXTURE5);
+		//Bind & enable shadow map texture
+		glBindTexture(GL_TEXTURE_2D, shadowmap);
+		glEnable(GL_TEXTURE_2D);
+		
+		//Set up texture coordinate generation.
+		glTexEnvi (GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+		glTexGenfv(GL_S, GL_EYE_PLANE, glm::value_ptr(texTrans[0]));
+		glEnable(GL_TEXTURE_GEN_S);
+
+		glTexGeni(GL_T, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+		glTexGenfv(GL_T, GL_EYE_PLANE, glm::value_ptr(texTrans[1]));
+		glEnable(GL_TEXTURE_GEN_T);
+
+		glTexGeni(GL_R, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+		glTexGenfv(GL_R, GL_EYE_PLANE, glm::value_ptr(texTrans[2]));
+		glEnable(GL_TEXTURE_GEN_R);
+
+		glTexGeni(GL_Q, GL_TEXTURE_GEN_MODE, GL_EYE_LINEAR);
+		glTexGenfv(GL_Q, GL_EYE_PLANE, glm::value_ptr(texTrans[3]));
+		glEnable(GL_TEXTURE_GEN_Q);
+
+		//Enable shadow comparison
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_R_TO_TEXTURE_ARB);
+
+		//Shadow comparison should generate an INTENSITY result
+		glTexParameteri(GL_TEXTURE_2D, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
+		
+		//Shadow comparison should be true (ie not in shadow) if r<=texture
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
+	glActiveTexture(GL_TEXTURE0);
+
+	//Set alpha test to discard false comparisons
+	glAlphaFunc(GL_GEQUAL, 0.99f);
+	glEnable(GL_ALPHA_TEST);
+
+	drawScene();
+
+	//Disable textures and texgen
+	glActiveTexture(GL_TEXTURE5);
+		glDisable(GL_TEXTURE_2D);
+		glDisable(GL_TEXTURE_GEN_S);
+		glDisable(GL_TEXTURE_GEN_T);
+		glDisable(GL_TEXTURE_GEN_R);
+		glDisable(GL_TEXTURE_GEN_Q);
+	glActiveTexture(GL_TEXTURE0);
+
+	glDisable(GL_ALPHA_TEST);
+	glEnable(GL_BLEND);
+	drawStars();
 
 	//	glAccum(GL_MULT, 0.5);
 	//	glAccum(GL_ACCUM, 0.5);
@@ -866,7 +916,7 @@ void display()	{
 void iter(int single)	{
 	if(run)	{
 		curZ -= step;
-		lightpos.z = curZ + 6;
+		lightpos.z -= step;
 		glutPostRedisplay();
 	} else if(single)	{
 		curZ -= step;
