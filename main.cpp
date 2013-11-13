@@ -227,7 +227,11 @@ void postGLInit()	{
 		Shader s;
 		shaders.push_back(s);
 	}
+#ifdef __APPLE__
+	shaders[0].init(string(PATH) + "tex.vs", string(PATH) + "glowtex.apple.fs");
+#else
 	shaders[0].init(string(PATH) + "tex.vs", string(PATH) + "glowtex.fs");
+#endif
 	
 	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
 	if(img != NULL)
@@ -512,11 +516,14 @@ void genDepthFBO(GLuint *fb, GLuint *depth, int w, int h)	{
 }
 
 void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint down,GLuint left,GLuint right,GLfloat siz)
-{	
-	glColor4f(1.0, 1.0, 1.0,1.0f);
- 
+{
 	// Save Current Matrix
 	glPushMatrix();
+	glPushAttrib(GL_COLOR_BUFFER_BIT);
+	glPushAttrib(GL_ENABLE_BIT);
+	glPushAttrib(GL_LIGHTING_BIT);
+	
+	glColor4f(1.0, 1.0, 1.0,1.0f);
  
 	// Second Move the render space to the correct position (Translate)
 	glTranslatef(position.x,position.y,position.z);
@@ -595,9 +602,14 @@ void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint d
             glTexCoord2f(1,0);
             glVertex3f(siz/2,-siz/2,-siz/2);
     glEnd();
+	glDisable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);  //turn everything back, which we turned on, and turn everything off, which we have turned on.
     glEnable(GL_DEPTH_TEST);
+
 	// Load Saved Matrix
+	glPopAttrib();
+	glPopAttrib();
+	glPopAttrib();
 	glPopMatrix();
  
 }
@@ -605,7 +617,6 @@ void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint d
 void drawPlane()	{
 	glPushMatrix();
 	
-	glColor3f(1.0,0.0,0.0);
 	glTranslatef(planeX, planeY, -5.0f);
 	glRotatef(vx * 1.5, 0.0f, 0.0f, 1.0f);
 	glRotatef(10.0f, 1.0f, 0.0f, 0.0f);
@@ -812,8 +823,6 @@ void drawScene()	{
 	
 	glTranslatef(0.0f, 0.0f, curZ);
 	drawPlane();
-	if(!drawless)
-		RenderSkybox(glm::vec3(0.0f, -200.0f, 0.0f),front, back, upper, down, lefty, righty,1000);
 	glTranslatef(0.0f, 0.0f, -curZ);
 	if(!drawless)
 		drawTerrain();
@@ -908,6 +917,9 @@ void display()	{
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, glm::value_ptr(glm::vec4(0.2, 0.2, 0.2, 1.0)));
 	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(0, 0, 0, 0)));
 
+	glTranslatef(0.0f, 0.0f, curZ);
+	RenderSkybox(glm::vec3(0.0f, -200.0f, 0.0f),front, back, upper, down, lefty, righty,1000);
+	glTranslatef(0.0f, 0.0f, -curZ);
 	drawScene();
 
 	//3rd pass
