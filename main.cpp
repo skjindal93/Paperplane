@@ -1,8 +1,7 @@
-//
 //  main.cpp
 //  PaperPlane
 //
-//  Created by Shivanker Goel on 15/10/13.
+//  Created by Shubham Jindal on 15/10/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 
@@ -42,6 +41,7 @@ GLvoid *font_style;
 Object plane, star;
 Material terrMaterial;
 GLuint bgTex;
+GLuint front, back, lefty, righty, upper, down;
 #define STAR_COUNT 7
 vector<glm::vec4> stars(STAR_COUNT);
 #define OBJECT_COUNT 5
@@ -55,6 +55,100 @@ GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
 
+glm::vec3 lightpos, lightdir;
+glm::vec4 lightPosition(40.0f, 200.0f,20.0f,0.0f);
+
+//Size of shadow map
+const int shadowMapSize=512;
+
+//Textures
+GLuint shadowMapTexture;
+
+//window size
+int windowWidth, windowHeight;
+
+//Matrices
+glm::mat4 lightProjectionMatrix, lightViewMatrix;
+glm::mat4 cameraProjectionMatrix, cameraViewMatrix;
+
+
+bool shadowInit(){
+	//Check for necessary extensions
+	if(!GL_ARB_depth_texture || !GL_ARB_shadow)
+	{
+		printf("I require ARB_depth_texture and ARB_shadow extensionsn\n");
+		return false;
+	}
+	
+	//Load identity modelview
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+
+	//Shading states
+	glShadeModel(GL_SMOOTH);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+	//Depth states
+	glClearDepth(1.0f);
+	glDepthFunc(GL_LEQUAL);
+	glEnable(GL_DEPTH_TEST);
+
+	//glEnable(GL_CULL_FACE);
+
+	//We use glScale when drawing the scene
+	glEnable(GL_NORMALIZE);
+
+	//Create the shadow map texture
+	glGenTextures(1, &shadowMapTexture);
+	glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
+	glTexImage2D(	GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, shadowMapSize, shadowMapSize, 0,
+					GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+	//Use the color as the ambient and diffuse material
+	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+	glEnable(GL_COLOR_MATERIAL);
+	
+	//White specular material color, shininess 16
+	glMaterialfv(GL_FRONT, GL_SPECULAR, white);
+	glMaterialf(GL_FRONT, GL_SHININESS, 16.0f);
+
+	//Calculate & save matrices
+	glPushMatrix();
+	
+	glLoadIdentity();
+	gluPerspective(65.0f, 1, 1.0f, 2000.0f);
+	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraProjectionMatrix));
+	
+	glLoadIdentity();
+	gluLookAt(eye.x,eye.y, eye.z,
+			center.x, center.y,center.z,
+			0.0f, 1.0f, 0.0f);
+
+	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraViewMatrix));
+	
+	glLoadIdentity();
+	gluPerspective(65.0f, 1.0f, 2.0f, 2000.0f);
+	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProjectionMatrix));
+	
+	glLoadIdentity();
+	
+	//gluLookAt(lightpos.x, lightpos.y, lightpos.z, lightpos.x - lightdir.x, lightpos.y - lightdir.y, lightpos.z - lightdir.z, 0, 1, 0);
+	gluLookAt(	lightPosition.x, lightPosition.y, lightPosition.z,
+				0.0f, 0.0f, 0.0f,
+				0.0f, 1.0f, 0.0f);
+
+	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightViewMatrix));
+	
+	glPopMatrix();
+	return true;
+}
+
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
 	zoom = 1.0f;
@@ -64,7 +158,7 @@ void preGLInit()	{
 	up[1] = 1.0f;
 	center = glm::vec3(0.0f);
 	center[2] = -10.0f;
-	
+
 	step = 2.0f;
 	slices = 150;
 	stacks = 100;
@@ -113,6 +207,8 @@ void preGLInit()	{
 	tosave = 0;
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 
+	lightdir = lightpos = glm::vec3(-40.0f, 200.0f, 1.0f);
+
 }
 
 /////////////////////////////////////////////////////////////
@@ -132,18 +228,17 @@ void GLInit()	{
 	//	glPointSize(8);
 	//	glLineWidth(5);
     
-	glEnable(GL_POINT_SMOOTH);
-	glEnable(GL_LINE_SMOOTH);
-	glEnable(GL_POLYGON_SMOOTH_HINT);
-	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);    // Make round points, not square points
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
-	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
-	
+//	glEnable(GL_POINT_SMOOTH);
+//	glEnable(GL_LINE_SMOOTH);
+//	//	glEnable(GL_POLYGON_SMOOTH_HINT);
+//	glHint(GL_POINT_SMOOTH_HINT, GL_NICEST);    // Make round points, not square points
+//	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
+//												//	glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);     // Antialias the lines
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	
 	glEnable(GL_MULTISAMPLE);
-	glDisable(GL_CULL_FACE);
+	//glDisable(GL_CULL_FACE);
 	glHint(GL_MULTISAMPLE_FILTER_HINT_NV, GL_NICEST);
 	
 	glClearColor(1.0f, 1.0f, 1.0f, 0.0f); // Clear the background of our window to transparent white (helps with glow)
@@ -155,14 +250,14 @@ void GLInit()	{
 	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(specular, 1.0f)));
 	glLightfv(GL_LIGHT0, GL_DIFFUSE,  glm::value_ptr(glm::vec4(diffuse, 1.0f)));
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
-	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, 1.0f, 0.0f)));
+	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0f)));
 	
 	glEnable(GL_LIGHT1); //Enable light #1
 	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
 	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
 	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
-	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
-	
+	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec3(0.0f, 20.0f, -10.0f)));
+		
 	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 	//glFrontFace(GL_CCW);
@@ -181,14 +276,15 @@ void GLInit()	{
 void postGLInit()	{
 	// Initialising the shader with the file names and then pushing into the vector somehow doesn't work. :-/
 #ifndef __APPLE__
-	glewInit();
+	//glewInit();
 #endif
+	/*
 	for(int i = 0; i < 1; ++i)	{
 		Shader s;
 		shaders.push_back(s);
 	}
 	shaders[0].init(string(PATH) + "tex.vs", string(PATH) + "glowtex.fs");
-	
+	*/
 	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
 	if(img != NULL)
 		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
@@ -200,9 +296,115 @@ void postGLInit()	{
 	star = (*readOBJ(string(PATH) + "star.obj"))[0];
 	star.load();
 	
-	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
-}
+	//bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
+	cout << "Start"<< endl;
+	front = loadTexture(string(PATH) + "front.ppm");
+	cout << "Read Back"<< endl;
+	upper = loadTexture(string(PATH) + "up.ppm");
+	cout << "Read Up"<< endl;
+	/*front = loadTexture(string(PATH) + "front.ppm");
+	cout << "Read Front"<< endl;
+	
+	/*lefty = loadTexture(string(PATH) + "left.ppm");
+	cout << "Read Left"<< endl;
+	righty = loadTexture(string(PATH) + "right.ppm");
+	cout << "Read Right	"<< endl;
+	down = loadTexture(string(PATH) + "down.ppm");
+	cout << "Read Down"<< endl;*/
+	back=down=lefty=righty=front;
+	
 
+}
+void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint down,GLuint left,GLuint right,GLfloat siz)
+{	
+	glColor4f(1.0, 1.0, 1.0,1.0f);
+ 
+	// Save Current Matrix
+	glPushMatrix();
+ 
+	// Second Move the render space to the correct position (Translate)
+	glTranslatef(position.x,position.y,position.z);
+
+	glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);       
+    glEnable(GL_TEXTURE_2D);        
+    glBindTexture(GL_TEXTURE_2D,back);  
+    glBegin(GL_QUADS);      
+            //back face
+            glTexCoord2f(0,0);
+            glVertex3f(siz/2,siz/2,siz/2);       
+            glTexCoord2f(1,0);      
+            glVertex3f(-siz/2,siz/2,siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(-siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(siz/2,-siz/2,siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,left);
+    glBegin(GL_QUADS);     
+            //left face
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,siz/2,siz/2);
+            glTexCoord2f(1,0);
+            glVertex3f(-siz/2,siz/2,-siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(-siz/2,-siz/2,-siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,-siz/2,siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,front);
+    glBegin(GL_QUADS);     
+            //front face
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,siz/2,-siz/2);
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,siz/2,-siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,-siz/2,-siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,-siz/2,-siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,right);
+    glBegin(GL_QUADS);     
+            //right face
+            glTexCoord2f(0,0);
+            glVertex3f(siz/2,siz/2,-siz/2);
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,siz/2,siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(siz/2,-siz/2,-siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,up);          
+    glBegin(GL_QUADS);                      //top face
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,siz/2,siz/2);
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,siz/2,-siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,siz/2,-siz/2);
+    glEnd();
+	glBindTexture(GL_TEXTURE_2D,down);               
+    glBegin(GL_QUADS);     
+            //bottom face
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,-siz/2,-siz/2);
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,-siz/2,-siz/2);
+    glEnd();
+    glEnable(GL_LIGHTING);  //turn everything back, which we turned on, and turn everything off, which we have turned on.
+    glEnable(GL_DEPTH_TEST);
+	// Load Saved Matrix
+	glPopMatrix();
+ 
+};
 // glut's window resize function
 // w, h - width and height of the window in pixels.
 void resizeWindow(int w, int h)	{
@@ -227,6 +429,7 @@ void resizeWindow(int w, int h)	{
 				   1.0f, //(double)w / (double)h, // Aspect
 				   0.5f,                // near-clipping
 				   2000.0);               // far-clipping
+	
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -358,6 +561,7 @@ void dragFunc(int x, int y)	{
 /////////////////// Main Draw Functions /////////////////////
 /////////////////////////////////////////////////////////////
 
+
 void setFrameBuffer(GLuint fbuf)	{
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fbuf);
 	resizeWindow(winW, winH);
@@ -432,9 +636,9 @@ void drawStar(float rotOffset = 0.0f)	{
 void drawStars()	{
 	glPushMatrix();
 	
-	GLuint stars_tex, fbo, depthbuf;
-	getFBO(&stars_tex, &fbo, &depthbuf);
-	
+//	GLuint stars_tex, fbo, depthbuf;
+//	getFBO(&stars_tex, &fbo, &depthbuf);
+
 	if(stars[0][2] > curZ)	{
 		stars[0].x = maxX * (randf() - 0.5);
 		stars[0].y = maxY * (randf() - 0.5);
@@ -452,19 +656,19 @@ void drawStars()	{
 	for(int i = STAR_COUNT - 1; i >= 0; i--)	{
 		if(stars[i][3] >= 0.0f)	{
 			
-			glClearColor(0.7, 0.7, 0.2, 0.0);
-			setFrameBuffer(fbo);
+			//glClearColor(0.7, 0.7, 0.2, 0.0);
+			//setFrameBuffer(fbo);
 			
 			glPushMatrix();
 			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
 			drawStar(stars[i][3]);
 			glPopMatrix();
 			
-			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, stars_tex);
+			//glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+			//glActiveTexture(GL_TEXTURE0);
+			//glBindTexture(GL_TEXTURE_2D, stars_tex);
 			
-			shaders[0].bind();
+			/*shaders[0].bind();
 			GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
 			GLint w = glGetUniformLocation(shaders[0].pID, "w");
 			GLint h = glGetUniformLocation(shaders[0].pID, "h");
@@ -480,12 +684,13 @@ void drawStars()	{
 			glPopMatrix();
 
 			shaders[0].unbind();
+			*/
 		}
 	}
 
-	glDeleteTextures(1, &stars_tex);
-	glDeleteFramebuffers(1, &fbo);
-	glDeleteRenderbuffersEXT(1, &depthbuf);
+	//glDeleteTextures(1, &stars_tex);
+	//glDeleteFramebuffers(1, &fbo);
+	//glDeleteRenderbuffersEXT(1, &depthbuf);
 	glPopMatrix();
 }
 
@@ -502,31 +707,29 @@ void drawObstacle(Obstacle *obs)	{
 		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
 		obs->obj->render(1.0f, true);
 	}
+	/*else if(!strcmp(obs->obj->name, "House"))	{
+		if (fmod(randf(),2) == 0) {
+			glTranslatef(10.0f,-10,0);
+			obs->obj->render(2.0f, true);
+		}
+		else {
+
+		}
+
+			glRotatef(180,0,1,0);
+			glTranslatef(-10.0f,-10,0);
+			obs->obj->render(2.0f, true);
+		}
+
+		//glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
+		
+	}*/
 	
 	glPopMatrix();
 }
 
-void drawStatics()	{
-	glPushMatrix();
-	glPushAttrib(GL_LIGHTING_BIT);
-	
-	// Endless Terrain
-	
-	GLfloat size = 300.0f, height = 50.0f;
-	int p = -curZ/size;
-	glTranslatef(0.0f, -30.0f, -(size * p));
-	
-	// What fraction of terrain are we currently on
-	float starting = (-curZ - size * p) / size;
-
-	terrMaterial.apply();
-	
-	if(terr != NULL)
-		terr->render(height, -size, starting, 4.0f);
-	
-	glPopAttrib();
-	glPopMatrix();
-	glPushMatrix();
+void renderObstacles(){
+glPushMatrix();
 	
 	//Objects
 	for(int j=0; j < OBJECT_COUNT; j++) {
@@ -563,60 +766,54 @@ void drawStatics()	{
 	
 	glPopMatrix();
 }
+void drawStatics()	{
+	glPushMatrix();
+	glPushAttrib(GL_LIGHTING_BIT);
+	
+	// Endless Terrain
+	
+	GLfloat size = 300.0f, height = 50.0f;
+	int p = -curZ/size;
+	glTranslatef(0.0f, -30.0f, -(size * p));
+	
+	// What fraction of terrain are we currently on
+	float starting = (-curZ - size * p) / size;
+
+	terrMaterial.apply();
+	
+	if(terr != NULL)
+		terr->render(height, -size, starting, 4.0f);
+	
+	glPopAttrib();
+	glPopMatrix();
+
+}
 
 void drawMoving()	{
-	glPushAttrib(GL_CURRENT_BIT);
-	glPushMatrix();
-		
-	// Background Texture
-	
-	glTranslatef(0.0f, 350.0f, -1000.0f);
-	glScalef(700.0f, 700.0f, 1.0f);
-
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, bgTex);
-	
-	glBegin(GL_TRIANGLES);
-	glNormal3f(0.0f, 0.0f, 1.0f);
-	
-	glTexCoord2f(1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 0.0f);
-	
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
-	
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	
-	glTexCoord2f(0.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, 0.0f);
-	
-	glTexCoord2f(1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 0.0f);
-	
-	glEnd();
-	
-	glDisable(GL_TEXTURE_2D);
-	
-	glPopMatrix();
-	glPopAttrib();
+	RenderSkybox(glm::vec3(0.0f, -200.0f, 0.0f),front, back, upper, down, lefty, righty,1000);
 }
 
 // glut's Main Display Function
 void drawScene()	{
+	
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	setFrameBuffer(0);
 	collide = false;
 	
-	glTranslatef(0.0f, 0.0f, curZ);
-	drawPlane();
+	glTranslatef(0.0f, 0.0f, curZ);	
 	drawMoving();
+	drawPlane();
 	glTranslatef(0.0f, 0.0f, -curZ);
+	
 	drawStatics();
+	renderObstacles();
+
+	glPushMatrix();
+	// Render fixed functionality into a texture and use in fragment shader
+	// Awesome idea
 	drawStars();
+	glPopMatrix();
+	
 	
 
 //	glAccum(GL_MULT, 0.5);
@@ -660,6 +857,7 @@ void drawScene()	{
 void iter(int dummy)	{
 	if(run)	{
 		curZ -= step;
+		//lightpos.z = curZ + 6.0f;
 		glutPostRedisplay();
 	}
 	
@@ -671,9 +869,10 @@ void iter(int dummy)	{
 		vy *= 0.8;
 	}
 	hovered = 0;
-	
+
 	if(run)
 		glutTimerFunc(1, iter, 0);
+	
 }
 
 int main(int argc, char * argv[])		{
@@ -691,11 +890,15 @@ int main(int argc, char * argv[])		{
 	
 	//initialize constants
 	preGLInit();
+	
 	// Initialize OpenGL.
 	GLInit();
+	
 	//initialize things which need GLInit before
 	postGLInit();
+
 	
+	printf("%s\n%s\n",glGetString(GL_VERSION),glGetString(GL_SHADING_LANGUAGE_VERSION));
 	// Callback for graphics image redrawing
 	glutDisplayFunc( drawScene );
 	
@@ -716,8 +919,7 @@ int main(int argc, char * argv[])		{
 	glutTimerFunc(0, iter, 0);
 	
 	// Start the main loop.  glutMainLoop never returns.
-	glutMainLoop(  );
+	glutMainLoop();
     
 	return 0;
 }
-

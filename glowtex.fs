@@ -1,4 +1,3 @@
-#version 120
 #define PI 3.1415926535897932384626433832795
 
 varying vec2 UV;
