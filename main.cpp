@@ -23,7 +23,8 @@ bool zcomparator(glm::vec4 a, glm::vec4 b)	{
 }
 
 void iter(int);
-void genDepthFBO(GLuint *fb, GLuint *depth, int w, int h);
+void genDepthFBO(GLuint*, GLuint*, int, int);
+void genFBO(GLuint*, GLuint*, GLuint*);
 
 /////////////////////////////////////////////////////////////
 //////////////////////// Constants //////////////////////////
@@ -56,10 +57,11 @@ GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
 bool drawless;
-#define SHADOW_MAP_RATIO 1
+#define SHADOW_MAP_RATIO 4
 glm::vec3 lightpos, lightdir;
 glm::mat4 lightProj, lightView, cameraProj, cameraView;
 GLuint shadowmap, shadowFBO;
+GLuint stars_tex, fbo, depthbuf;
 
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -239,6 +241,8 @@ void postGLInit()	{
 	
 	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
 	
+	genFBO(&stars_tex, &fbo, &depthbuf);
+
 	//Load identity modelview
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -518,10 +522,7 @@ void drawStar(float rotOffset = 0.0f)	{
 
 void drawStars()	{
 	glPushMatrix();
-	
-	GLuint stars_tex, fbo, depthbuf;
-	genFBO(&stars_tex, &fbo, &depthbuf);
-	
+		
 	if(stars[0][2] > curZ)	{
 		stars[0].x = maxX * (randf() - 0.5);
 		stars[0].y = maxY * (randf() - 0.5);
@@ -572,9 +573,9 @@ void drawStars()	{
 		}
 	}
 
-	glDeleteTextures(1, &stars_tex);
-	glDeleteFramebuffers(1, &fbo);
-	glDeleteRenderbuffersEXT(1, &depthbuf);
+//	glDeleteTextures(1, &stars_tex);
+//	glDeleteFramebuffers(1, &fbo);
+//	glDeleteRenderbuffersEXT(1, &depthbuf);
 	glPopMatrix();
 }
 
@@ -775,10 +776,6 @@ void display()	{
 	glViewport(0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
 
 	drawScene();
-
-	//Read the depth buffer into the shadow map texture
-//	glBindTexture(GL_TEXTURE_2D, shadowmap);
-//	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
 
 	//2nd pass - Draw from camera's point of view
 	setFrameBuffer(0);
