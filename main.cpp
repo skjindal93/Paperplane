@@ -62,6 +62,7 @@ glm::vec3 lightpos, lightdir;
 glm::mat4 lightProj, lightView, cameraProj, cameraView;
 GLuint shadowmap, shadowFBO;
 GLuint stars_tex, fbo, depthbuf;
+GLuint front, back, lefty, righty, upper, down;
 
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -240,6 +241,21 @@ void postGLInit()	{
 	star.load();
 	
 	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
+
+	cout << "Start"<< endl;
+	front = loadTexture(string(PATH) + "front.ppm");
+	cout << "Read Front"<< endl;
+	upper = loadTexture(string(PATH) + "up.ppm");
+	cout << "Read Up"<< endl;
+	back = loadTexture(string(PATH) + "back.ppm");
+	cout << "Read Back"<< endl;
+	
+	lefty = loadTexture(string(PATH) + "left.ppm");
+	cout << "Read Left"<< endl;
+	righty = loadTexture(string(PATH) + "right.ppm");
+	cout << "Read Right	"<< endl;
+	down = loadTexture(string(PATH) + "down.ppm");
+	cout << "Read Down"<< endl;
 	
 	genFBO(&stars_tex, &fbo, &depthbuf);
 
@@ -495,6 +511,97 @@ void genDepthFBO(GLuint *fb, GLuint *depth, int w, int h)	{
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
+void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint down,GLuint left,GLuint right,GLfloat siz)
+{	
+	glColor4f(1.0, 1.0, 1.0,1.0f);
+ 
+	// Save Current Matrix
+	glPushMatrix();
+ 
+	// Second Move the render space to the correct position (Translate)
+	glTranslatef(position.x,position.y,position.z);
+
+	glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);       
+    glEnable(GL_TEXTURE_2D);        
+    glBindTexture(GL_TEXTURE_2D,back);  
+    glBegin(GL_QUADS);      
+            //back face
+            glTexCoord2f(0,0);
+            glVertex3f(siz/2,siz/2,siz/2);       
+            glTexCoord2f(1,0);      
+            glVertex3f(-siz/2,siz/2,siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(-siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(siz/2,-siz/2,siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,left);
+    glBegin(GL_QUADS);     
+            //left face
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,siz/2,siz/2);
+            glTexCoord2f(1,0);
+            glVertex3f(-siz/2,siz/2,-siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(-siz/2,-siz/2,-siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,-siz/2,siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,front);
+    glBegin(GL_QUADS);     
+            //front face
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,siz/2,-siz/2);
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,siz/2,-siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,-siz/2,-siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,-siz/2,-siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,right);
+    glBegin(GL_QUADS);     
+            //right face
+            glTexCoord2f(0,0);
+            glVertex3f(siz/2,siz/2,-siz/2);
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,siz/2,siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(siz/2,-siz/2,-siz/2);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D,up);          
+    glBegin(GL_QUADS);                      //top face
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,siz/2,siz/2);
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,siz/2,-siz/2);
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,siz/2,-siz/2);
+    glEnd();
+	glBindTexture(GL_TEXTURE_2D,down);               
+    glBegin(GL_QUADS);     
+            //bottom face
+            glTexCoord2f(1,1);
+            glVertex3f(siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,1);
+            glVertex3f(-siz/2,-siz/2,siz/2);
+            glTexCoord2f(0,0);
+            glVertex3f(-siz/2,-siz/2,-siz/2);
+            glTexCoord2f(1,0);
+            glVertex3f(siz/2,-siz/2,-siz/2);
+    glEnd();
+    glEnable(GL_LIGHTING);  //turn everything back, which we turned on, and turn everything off, which we have turned on.
+    glEnable(GL_DEPTH_TEST);
+	// Load Saved Matrix
+	glPopMatrix();
+ 
+}
+
 void drawPlane()	{
 	glPushMatrix();
 	
@@ -596,32 +703,30 @@ void drawObstacle(Obstacle *obs)	{
 	glPopMatrix();
 }
 
-void drawStatics()	{
-	
-	if(!drawless)	{
-		glPushMatrix();
-		glPushAttrib(GL_LIGHTING_BIT);
-		
-		// Endless Terrain
-		GLfloat size = 300.0f, height = 50.0f;
-		int p = -curZ/size;
-		glTranslatef(0.0f, -30.0f, -(size * p));
-		
-		// What fraction of terrain are we currently on
-		float starting = (-curZ - size * p) / size;
-
-		if(!drawless)
-			terrMaterial.apply();
-		
-		if(terr != NULL)
-			terr->render(height, -size, starting, 4.0f);
-
-		glPopAttrib();
-		glPopMatrix();
-
-	}
+void drawTerrain()	{
 	glPushMatrix();
+	glPushAttrib(GL_LIGHTING_BIT);
 	
+	// Endless Terrain
+	GLfloat size = 300.0f, height = 50.0f;
+	int p = -curZ/size;
+	glTranslatef(0.0f, -30.0f, -(size * p));
+	
+	// What fraction of terrain are we currently on
+	float starting = (-curZ - size * p) / size;
+
+	if(!drawless)
+		terrMaterial.apply();
+	
+	if(terr != NULL)
+		terr->render(height, -size, starting, 4.0f);
+
+	glPopAttrib();
+	glPopMatrix();
+}
+
+void drawObstacles(){
+	glPushMatrix();
 	//Objects
 	for(int j=0; j < OBJECT_COUNT; j++) {
 		Obstacle *obs;
@@ -650,7 +755,7 @@ void drawStatics()	{
 				delete[] obs->obj->modelView;
 				obs->obj->modelView = NULL;
 			}
-
+			
 			obs->obj->save = false;
 		}
 	}
@@ -658,7 +763,7 @@ void drawStatics()	{
 	glPopMatrix();
 }
 
-void drawMoving()	{
+void drawStaticBG()	{
 	glPushAttrib(GL_CURRENT_BIT);
 	glPushMatrix();
 		
@@ -707,11 +812,12 @@ void drawScene()	{
 	
 	glTranslatef(0.0f, 0.0f, curZ);
 	drawPlane();
-	if(!drawless)	{
-		drawMoving();
-	}
+	if(!drawless)
+		RenderSkybox(glm::vec3(0.0f, -200.0f, 0.0f),front, back, upper, down, lefty, righty,1000);
 	glTranslatef(0.0f, 0.0f, -curZ);
-	drawStatics();
+	if(!drawless)
+		drawTerrain();
+	drawObstacles();
 	
 	glPopMatrix();
 }
@@ -978,4 +1084,3 @@ int main(int argc, char * argv[])		{
     
 	return 0;
 }
-

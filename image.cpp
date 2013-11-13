@@ -68,7 +68,7 @@ GLuint loadTexture(string file)	{
 	img >> buff;
 	//check the image format
     if (buff[0] != 'P' || buff[1] != '3') {
-		cerr << "Texture file not in the standard P3 format." << endl;
+		cerr << "Texture file not in the standard P3 format." << buff<< endl;
 		return NULL;
 	}
 	

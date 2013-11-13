@@ -140,7 +140,8 @@ vector<Object>* readOBJ(string file)	{
 				
 				char buffer[1000];
 				fscanf(obj, "%*[ ]%255[^\n]", buffer);
-				cur->texture = loadTexture(buffer);
+				cur->texture = loadTexture(string(PATH) + buffer);
+				cur->useTex = true;
 				
 			} else if (!strcmp(type, "v"))	{
 

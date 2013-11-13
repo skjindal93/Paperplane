@@ -38,12 +38,14 @@ using namespace std;
 #include <windows.h>
 #include <GL/freeglut.h>
 #include <gl/glext.h>
+#include "Maths/Maths.h"
 #define PATH "paperplane\\"
 
 #else
 #include <GL/gl.h>
 #include <GL/glut.h>
 #include <GL/glext.h>
+
 #define PATH ""
 
 #endif
