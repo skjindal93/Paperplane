@@ -56,8 +56,8 @@ bool collide;
 GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
-bool drawless;
-#define SHADOW_MAP_RATIO 4
+bool drawless, boost;
+#define SHADOW_MAP_RATIO 5
 glm::vec3 lightpos, lightdir;
 glm::mat4 lightProj, lightView, cameraProj, cameraView;
 GLuint shadowmap, shadowFBO;
@@ -125,6 +125,8 @@ void preGLInit()	{
 	drawless = false;
 	lightpos = glm::vec3(-5.0f, 20.0f, 150.0f);
 	lightdir = -glm::vec3(5.0f, -15.0f, -200.0f);
+	
+	boost = false;
 
 }
 
@@ -323,6 +325,11 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 		
 		case 13:
 			run ? pause() : resume(1);
+			break;
+			
+		case 'n':
+		case 'N':
+			boost = !boost;
 			break;
 			
 		case 27:                                    // "27" is theEscape key
@@ -847,7 +854,7 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraView));
 	
 	glLoadIdentity();
-	glOrtho(-10.0f, 10.0f, -20.0f, 20.0f, 10.0f, 1000.0f);
+	glOrtho(-100.0f, 100.0f, -50.0f, 50.0f, 10.0f, 1000.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProj));
 	
 	glLoadIdentity();
@@ -990,26 +997,12 @@ void display()	{
 	glEnable(GL_BLEND);
 	drawStars();
 
-	//	glAccum(GL_MULT, 0.5);
-	//	glAccum(GL_ACCUM, 0.5);
-	//	glAccum(GL_RETURN, 1.0);
-	
-	// TODO: Uncomment the code below to blur plane partially.
-	//	GLfloat alpha = 0.2, beta = 0.5;
-	//	glAccum(GL_MULT, 1.0f - alpha);
-	//	glAccum(GL_ACCUM, alpha);
-	//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//
-	//	drawPlane();
-	//	glAccum(GL_ACCUM, beta * alpha);
-	//	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//
-	//	glAccum(GL_RETURN, 1.0/(1.0 - beta));
-	//	drawPlane();
-	//
-	//	// TODO: Now multiply the frame buffer by `beta` (or beta * alpha : check).
-	
-	if(collide)	{
+	if(boost)	{
+		glAccum(GL_MULT, 0.5);
+		glAccum(GL_ACCUM, 0.5);
+		glAccum(GL_RETURN, 1.0);
+	}
+	else if(collide)	{
 		cout << "Hawwwwwww!\n";
 		pause();
 	}
@@ -1030,13 +1023,18 @@ void display()	{
 
 void iter(int single)	{
 	if(run)	{
-		curZ -= step;
-		lightpos.z -= step;
+		
+		curZ -= boost ? step * 2 : step;
+		lightpos.z -= boost ? step * 2 : step;
+		
 		glutPostRedisplay();
+		
 	} else if(single)	{
+		
 		curZ -= step;
 		lightpos.z = curZ + 6;
 		glutPostRedisplay();
+		
 	}
 	
 	eye[2] = curZ + 5.0f;
