@@ -63,6 +63,7 @@ glm::mat4 lightProj, lightView, cameraProj, cameraView;
 GLuint shadowmap, shadowFBO;
 GLuint stars_tex, fbo, depthbuf;
 GLuint front, back, lefty, righty, upper, down;
+GLfloat starsW, starsH, shadowW, shadowH;
 
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -218,6 +219,7 @@ void resizeWindow(int w, int h)	{
 				   0.5f,                // near-clipping
 				   2000.0);               // far-clipping
 	glMatrixMode(GL_MODELVIEW);
+
 }
 
 void postGLInit()	{
@@ -262,8 +264,6 @@ void postGLInit()	{
 	cout << "Read Right	"<< endl;
 	down = loadTexture(string(PATH) + "down.ppm");
 	cout << "Read Down"<< endl;
-	
-	genFBO(&stars_tex, &fbo, &depthbuf);
 
 	//Load identity modelview
 	glMatrixMode(GL_MODELVIEW);
@@ -282,7 +282,12 @@ void postGLInit()	{
 	glMaterialfv(GL_FRONT, GL_SPECULAR, glm::value_ptr(glm::vec4(1,1,1,1)));
 	glMaterialf(GL_FRONT, GL_SHININESS, 16.0f);
 	
-	genDepthFBO(&shadowFBO, &shadowmap, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
+	starsW = winW;
+	starsH = winH;
+	genFBO(&stars_tex, &fbo, &depthbuf);
+	shadowW = winW * SHADOW_MAP_RATIO;
+	shadowH = winH * SHADOW_MAP_RATIO;
+	genDepthFBO(&shadowFBO, &shadowmap, shadowW, shadowH);
 }
 
 void pause()	{
@@ -313,11 +318,6 @@ void resume(int single = 0)	{
 void keyboardFunc(unsigned char key, int x, int y)	{
 	keyModifiers = glutGetModifiers();
 	switch (key) {
-		case 'r':
-		case 'R':
-			preGLInit();
-			resizeWindow(winW, winH);
-			break;
 		
 		case ' ':
 			run ? pause() : resume();
@@ -662,6 +662,18 @@ void drawStars()	{
 		stars[0][3] = -1.0f;
 	}
 	
+	if(starsW != winW || starsH != winH)	{
+		glDeleteTextures(1, &stars_tex);
+		glDeleteFramebuffers(1, &fbo);
+		glDeleteRenderbuffersEXT(1, &depthbuf);
+		
+		starsW = winW;
+		starsH = winH;
+		genFBO(&stars_tex, &fbo, &depthbuf);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	}
+
+	
 	for(int i = STAR_COUNT - 1; i >= 0; i--)	{
 		if(stars[i][3] >= 0.0f)	{
 			
@@ -673,28 +685,26 @@ void drawStars()	{
 			drawStar(stars[i][3]);
 			glPopMatrix();
 			
-			if(!drawless)	{
-				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, stars_tex);
-				
-				shaders[0].bind();
-				GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
-				GLint w = glGetUniformLocation(shaders[0].pID, "w");
-				GLint h = glGetUniformLocation(shaders[0].pID, "h");
-				glUniform1i(fragtex, 0);
-				glUniform1i(w, winW);
-				glUniform1i(h, winH);
-				
-				GLfloat scale = 2.0;
-				glPushMatrix();
-				glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
-				glScalef(scale, scale, scale);
-				drawStar(stars[i][3]);
-				glPopMatrix();
+			glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, stars_tex);
+			
+			shaders[0].bind();
+			GLuint fragtex = glGetUniformLocation(shaders[0].pID, "tex");
+			GLint w = glGetUniformLocation(shaders[0].pID, "w");
+			GLint h = glGetUniformLocation(shaders[0].pID, "h");
+			glUniform1i(fragtex, 0);
+			glUniform1i(w, winW);
+			glUniform1i(h, winH);
+			
+			GLfloat scale = 2.0;
+			glPushMatrix();
+			glTranslatef(stars[i][0], stars[i][1], stars[i][2]);
+			glScalef(scale, scale, scale);
+			drawStar(stars[i][3]);
+			glPopMatrix();
 
-				shaders[0].unbind();
-			}
+			shaders[0].unbind();
 		}
 	}
 
@@ -844,7 +854,7 @@ void display()	{
 	glPushMatrix();
 	
 	glLoadIdentity();
-	gluPerspective(65.0f, 1.0f, 0.5f, 2000.0f);
+	gluPerspective(zoom * 65.0f, 1.0f, 0.5f, 2000.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraProj));
 	
 	glLoadIdentity();
@@ -865,6 +875,17 @@ void display()	{
 	
 	glPopMatrix();
 	
+	// reconstruct buffers only if necessary
+	if(shadowW != winW * SHADOW_MAP_RATIO || shadowH != winH * SHADOW_MAP_RATIO)	{
+		glDeleteTextures(1, &shadowmap);
+		glDeleteFramebuffers(1, &shadowFBO);
+
+		shadowW = winW * SHADOW_MAP_RATIO;
+		shadowH = winH * SHADOW_MAP_RATIO;
+		genDepthFBO(&shadowFBO, &shadowmap, shadowW, shadowH);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+
+	}
 	
 	// Begin actual stuff
 	glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -895,7 +916,7 @@ void display()	{
 			  0.0f, 1.0f, 0.0f);
 
 	//Use viewport the same size as the shadow map
-	glViewport(0, 0, winW * SHADOW_MAP_RATIO, winH * SHADOW_MAP_RATIO);
+	glViewport(0, 0, shadowW, shadowH);
 
 	drawScene();
 
