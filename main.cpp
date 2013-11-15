@@ -173,11 +173,11 @@ void GLInit()	{
 	glLightfv(GL_LIGHT0, GL_AMBIENT,  glm::value_ptr(glm::vec4(ambient, 1.0f)));
 	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0f)));
 	
-//	glEnable(GL_LIGHT1); //Enable light #1
-//	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
-//	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
-//	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
-//	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
+	glEnable(GL_LIGHT1); //Enable light #1
+	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
+	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
+	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
+	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
 	
 //	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
@@ -526,9 +526,7 @@ void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint d
 {
 	// Save Current Matrix
 	glPushMatrix();
-	glPushAttrib(GL_COLOR_BUFFER_BIT);
 	glPushAttrib(GL_ENABLE_BIT);
-	glPushAttrib(GL_LIGHTING_BIT);
 	
 	glColor4f(1.0, 1.0, 1.0,1.0f);
  
@@ -614,8 +612,6 @@ void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint d
     glEnable(GL_DEPTH_TEST);
 
 	// Load Saved Matrix
-	glPopAttrib();
-	glPopAttrib();
 	glPopAttrib();
 	glPopMatrix();
  
