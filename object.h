@@ -30,15 +30,14 @@ struct triangle	{
 
 class Object	{
 public:
-	bool loaded, useTex, useNormal, save;
+	bool loaded, useTex, useNormal;
 	GLuint texture, vertexVBO, textureVBO, normalVBO;
 	vector<glm::vec3> normals, vertices;
 	vector<glm::vec2> uvs;
-	glm::mat4 *modelView;
 	vector<triangle> triangles;
+	glm::mat4 *modelView;
 	Material *mtl;
 	char* name;
-	int timesUsed;
 	
 	Object();
 	
@@ -52,8 +51,27 @@ public:
 
 };
 
-bool triangleIntersect(glm::vec3 a[3], glm::vec3 b[3]);
+class ObjectGroup	{
+public:
+	vector<Object> objList;
+	string name;
+	int timesUsed;
+	bool save;
+	glm::mat4 *modelView;
+	
+	ObjectGroup();
+	ObjectGroup(string file);
 
-vector<Object>* readOBJ(string file);
+	void readOBJ(string file);
+	
+	void load();
+	bool collision(ObjectGroup *other);
+	void render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ, bool load = false);
+	void render(GLfloat scale = 1.0f, bool load = false);
+	void unload();
+
+};
+
+bool triangleIntersect(glm::vec3 a[3], glm::vec3 b[3]);
 
 #endif /* defined(__PaperPlane__object__) */

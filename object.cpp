@@ -77,7 +77,7 @@ vector<Material>* readMTL(string file)	{
 
 Object::Object()	{
 	useTex = useNormal = 0;
-	loaded = save = false;
+	loaded = false;
 	modelView = NULL;
 	texture = vertexVBO = textureVBO = normalVBO = 0;
 	normals.clear();
@@ -86,7 +86,6 @@ Object::Object()	{
 	triangles.clear();
 	mtl = NULL;
 	name = new char[32];
-	timesUsed = 0;
 }
 
 Object::~Object()	{
@@ -95,119 +94,6 @@ Object::~Object()	{
 //	if(texture)
 //		glDeleteTextures( 1, &texture );
    	//delete[] name;
-}
-
-vector<Object>* readOBJ(string file)	{
-	vector<Object>* objects;
-	objects = new vector<Object>();
-	Object *cur = NULL;
-	vector<Material> *mtllib;
-
-	// read file
-	FILE *obj = fopen(file.c_str(), "r");
-	if(obj == NULL)
-		cerr << "Could not read file " << file << endl;
-	else	{
-		while(1)	{
-			char type[32];
-			int res = fscanf(obj, "%s", type);
-			if(res == EOF)
-				break;
-			
-			if (!strcmp(type, "mtllib"))	{
-				
-				char buffer[1000];
-				fscanf(obj, "%*[ ]%255[^\n]", buffer);
-				mtllib = readMTL(string(PATH) + buffer);
-				
-			} else if (!strcmp(type, "o"))	{
-				
-				if(cur)
-					objects->push_back(*cur);
-				cur = new Object();
-				fscanf(obj, "%*[ ]%31[^\n]", cur->name);
-				
-			} else if (!strcmp(type, "usemtl"))	{
-				
-				fscanf(obj, "%*[ ]%31[^\n]", type);
-				for(vector<Material>::iterator it = mtllib->begin(); it != mtllib->end(); ++it)
-					if(!strcmp(it->name, type))	{
-						cur->mtl = &(*it);
-						break;
-					}
-				
-			} else if (!strcmp(type, "usetex"))	{
-				
-				char buffer[1000];
-				fscanf(obj, "%*[ ]%255[^\n]", buffer);
-				cur->texture = loadTexture(string(PATH) + buffer);
-				cur->useTex = true;
-				
-			} else if (!strcmp(type, "v"))	{
-
-				glm::vec3 vec;
-				fscanf(obj, "%f %f %f", &vec.x, &vec.y, &vec.z);
-				cur->vertices.push_back(vec);
-				
-			} else if (!strcmp(type, "vn"))	{
-
-				glm::vec3 vec;
-				fscanf(obj, "%f %f %f", &vec.x, &vec.y, &vec.z);
-				cur->normals.push_back(vec);
-				
-			} else if (!strcmp(type, "vt"))	{
-				
-				glm::vec2 vec;
-				fscanf(obj, "%f %f", &vec.x, &vec.y);
-				cur->uvs.push_back(vec);
-				
-			} else if (!strcmp(type, "f"))	{
-				
-				cur->useTex = (cur->uvs.size() != 0);
-				cur->useNormal = (cur->normals.size() != 0);
-				triangle tri;
-				if (cur->useTex && cur->useNormal)	{
-					int r = fscanf(obj, "%d/%d/%d %d/%d/%d %d/%d/%d", &tri.v[0], &tri.t[0], &tri.n[0], &tri.v[1], &tri.t[1], &tri.n[1], &tri.v[2], &tri.t[2], &tri.n[2]);
-					
-					tri.v -= 1;
-					tri.n -= 1;
-					tri.t -= 1;
-					
-					if(r == 9)
-						cur->triangles.push_back(tri);
-				} else if (cur->useNormal)	{
-					int r = fscanf(obj, "%d//%d %d//%d %d//%d", &tri.v[0], &tri.n[0], &tri.v[1], &tri.n[1], &tri.v[2], &tri.n[2]);
-					
-					tri.v -= 1;
-					tri.n -= 1;
-					
-					if(r == 6)
-						cur->triangles.push_back(tri);
-				} else if (cur->useTex)	{
-					int r = fscanf(obj, "%d/%d/ %d/%d/ %d/%d/", &tri.v[0], &tri.t[0], &tri.v[1], &tri.t[1], &tri.v[2], &tri.t[2]);
-					
-					tri.v -= 1;
-					tri.t -= 1;
-					
-					if(r == 6)
-						cur->triangles.push_back(tri);
-				} else	{
-					int r = fscanf(obj, "%d// %d// %d//", &tri.v[0], &tri.v[1], &tri.v[2]);
-					tri.v -= 1;
-					if(r == 3)
-						cur->triangles.push_back(tri);
-				}
-				
-			}
-			
-			fscanf(obj, "%*[^\n]");		// skip the rest of the line
-			fscanf(obj, "%*[\n]");		// and the newline
-		}
-		if(cur)
-			objects->push_back(*cur);
-	}
-	
-	return objects;
 }
 
 void Object::load()	{
@@ -396,14 +282,6 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ, bool load)	{
 	
     glScalef(scaleX, scaleY, scaleZ);
 	
-	if (save) {
-		if (modelView == NULL)
-			modelView = new glm::mat4();
-
-		glGetFloatv (GL_MODELVIEW_MATRIX, glm::value_ptr(*modelView));
-	}
-
-	
 	if(mtl)
 		mtl->apply();
 	
@@ -467,4 +345,180 @@ void Object::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ, bool load)	{
 	glPopAttrib();
 	glPopAttrib();
 	glPopMatrix();
+}
+
+ObjectGroup::ObjectGroup()	{
+	timesUsed = 0;
+	save = false;
+	modelView = NULL;
+	objList.clear();
+}
+
+ObjectGroup::ObjectGroup(string file)	{
+	timesUsed = 0;
+	save = false;
+	modelView = NULL;
+	objList.clear();
+	readOBJ(file);
+}
+
+void ObjectGroup::readOBJ(string file)	{
+	name = file;
+	
+	Object *cur = NULL;
+	vector<Material> *mtllib;
+	
+	// read file
+	FILE *obj = fopen(file.c_str(), "r");
+	if(obj == NULL)
+		cerr << "Could not read file " << file << endl;
+	else	{
+		while(1)	{
+			char type[32];
+			int res = fscanf(obj, "%s", type);
+			if(res == EOF)
+				break;
+			
+			if (!strcmp(type, "mtllib"))	{
+				
+				char buffer[1000];
+				fscanf(obj, "%*[ ]%255[^\n]", buffer);
+				mtllib = readMTL(string(PATH) + buffer);
+				
+			} else if (!strcmp(type, "o"))	{
+				
+				if(cur)
+					objList.push_back(*cur);
+				cur = new Object();
+				fscanf(obj, "%*[ ]%31[^\n]", cur->name);
+				
+			} else if (!strcmp(type, "usemtl"))	{
+				
+				fscanf(obj, "%*[ ]%31[^\n]", type);
+				for(vector<Material>::iterator it = mtllib->begin(); it != mtllib->end(); ++it)
+					if(!strcmp(it->name, type))	{
+						cur->mtl = &(*it);
+						break;
+					}
+			} else if (!strcmp(type, "name"))	{
+				
+				char buffer[80];
+				fscanf(obj, "%*[ ]%255[^\n]", buffer);
+				name = string(buffer);
+
+			} else if (!strcmp(type, "usetex"))	{
+				
+				char buffer[1000];
+				fscanf(obj, "%*[ ]%255[^\n]", buffer);
+				cur->texture = loadTexture(string(PATH) + buffer);
+				cur->useTex = true;
+				
+			} else if (!strcmp(type, "v"))	{
+				
+				glm::vec3 vec;
+				fscanf(obj, "%f %f %f", &vec.x, &vec.y, &vec.z);
+				cur->vertices.push_back(vec);
+				
+			} else if (!strcmp(type, "vn"))	{
+				
+				glm::vec3 vec;
+				fscanf(obj, "%f %f %f", &vec.x, &vec.y, &vec.z);
+				cur->normals.push_back(vec);
+				
+			} else if (!strcmp(type, "vt"))	{
+				
+				glm::vec2 vec;
+				fscanf(obj, "%f %f", &vec.x, &vec.y);
+				cur->uvs.push_back(vec);
+				
+			} else if (!strcmp(type, "f"))	{
+				
+				cur->useTex = (cur->uvs.size() != 0);
+				cur->useNormal = (cur->normals.size() != 0);
+				triangle tri;
+				if (cur->useTex && cur->useNormal)	{
+					int r = fscanf(obj, "%d/%d/%d %d/%d/%d %d/%d/%d", &tri.v[0], &tri.t[0], &tri.n[0], &tri.v[1], &tri.t[1], &tri.n[1], &tri.v[2], &tri.t[2], &tri.n[2]);
+					
+					tri.v -= 1;
+					tri.n -= 1;
+					tri.t -= 1;
+					
+					if(r == 9)
+						cur->triangles.push_back(tri);
+				} else if (cur->useNormal)	{
+					int r = fscanf(obj, "%d//%d %d//%d %d//%d", &tri.v[0], &tri.n[0], &tri.v[1], &tri.n[1], &tri.v[2], &tri.n[2]);
+					
+					tri.v -= 1;
+					tri.n -= 1;
+					
+					if(r == 6)
+						cur->triangles.push_back(tri);
+				} else if (cur->useTex)	{
+					int r = fscanf(obj, "%d/%d/ %d/%d/ %d/%d/", &tri.v[0], &tri.t[0], &tri.v[1], &tri.t[1], &tri.v[2], &tri.t[2]);
+					
+					tri.v -= 1;
+					tri.t -= 1;
+					
+					if(r == 6)
+						cur->triangles.push_back(tri);
+				} else	{
+					int r = fscanf(obj, "%d// %d// %d//", &tri.v[0], &tri.v[1], &tri.v[2]);
+					tri.v -= 1;
+					if(r == 3)
+						cur->triangles.push_back(tri);
+				}
+				
+			}
+			
+			fscanf(obj, "%*[^\n]");		// skip the rest of the line
+			fscanf(obj, "%*[\n]");		// and the newline
+		}
+		if(cur)
+			objList.push_back(*cur);
+	}
+}
+
+void ObjectGroup::load()	{
+	for(int i = 0; i < objList.size(); ++i)
+		objList[i].load();
+}
+
+bool ObjectGroup::collision(ObjectGroup *other)	{
+	for(int i = 0; i < objList.size(); ++i)	{
+		objList[i].modelView = modelView;
+		
+		for(int j = 0; j < other->objList.size(); ++j)	{
+			other->objList[j].modelView = other->modelView;
+			if(objList[i].collision(&other->objList[j]))
+				return true;
+		}
+	}
+	return false;
+}
+
+void ObjectGroup::render(GLfloat scaleX, GLfloat scaleY, GLfloat scaleZ, bool load)	{
+	glPushMatrix();
+	
+	glScalef(scaleX, scaleY, scaleZ);
+
+	if (save) {
+		if (modelView == NULL)
+			modelView = new glm::mat4();
+		
+		glGetFloatv (GL_MODELVIEW_MATRIX, glm::value_ptr(*modelView));
+	}
+
+	for(int i = 0; i < objList.size(); ++i)
+		objList[i].render(1.0f, load);
+	
+	glPopMatrix();
+}
+
+void ObjectGroup::render(GLfloat scale, bool load)	{
+	render(scale, scale, scale, load);
+}
+
+void ObjectGroup::unload()	{
+	for(int i = 0; i < objList.size(); ++i)
+		objList[i].unload();
 }

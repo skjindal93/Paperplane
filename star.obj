@@ -1,6 +1,7 @@
 # Blender v2.68 (sub 0) OBJ File: 'Mirror Upper Face.blend'
 # www.blender.org
 mtllib star.mtl
+name Star
 o Star
 v 0.009651 -0.549510 0.000000
 v -0.974841 -0.017120 -1.002075

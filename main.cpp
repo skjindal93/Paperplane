@@ -15,7 +15,7 @@ double randf()	{
 
 struct Obstacle{
 	GLfloat	z;
-	Object *obj;
+	ObjectGroup *obj;
 };
 
 bool zcomparator(glm::vec4 a, glm::vec4 b)	{
@@ -41,14 +41,14 @@ glm::vec3 specular, diffuse, ambient;
 int t1, t2, frameCount, lastCount;
 GLfloat fps;
 GLvoid *font_style;
-Object plane, star;
+ObjectGroup plane, star;
 Material terrMaterial;
 GLuint bgTex;
 #define STAR_COUNT 7
 vector<glm::vec4> stars(STAR_COUNT);
 #define OBJECT_COUNT 5
 vector<Obstacle*> obstaclesList;
-vector<Object> *allObjects;
+vector<ObjectGroup> allObjects;
 GLfloat stargap, obstaclegap;
 int score, xold, yold, vx, vy;
 int maxX, maxY, hovered, tosave;
@@ -228,18 +228,24 @@ void postGLInit()	{
 	if(img != NULL)
 		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
 	
-	plane = (*readOBJ(string(PATH) + "plane.obj"))[0];
+	plane.readOBJ(string(PATH) + "plane.obj");
 	plane.load();
 	plane.save = true;
 	
-	star = (*readOBJ(string(PATH) + "star.obj"))[0];
+	star.readOBJ(string(PATH) + "star.obj");
 	star.load();
 	
-	allObjects = readOBJ(string(PATH) + "objects.obj");
+	allObjects.clear();
+	allObjects.resize(3);
+	allObjects[0].readOBJ(string(PATH) + "torus.obj");
+	allObjects[1].readOBJ(string(PATH) + "cube.obj");
+	allObjects[2].readOBJ(string(PATH) + "house.obj");
+	//allObjects[3].readOBJ(string(PATH) + "temple.obj");
+	
 	for (int j = 0; j < OBJECT_COUNT; j++)	{
 		int random = rand();
-		Object *obj;
-		obj = &((*allObjects)[random % allObjects->size()]);
+		ObjectGroup *obj;
+		obj = &(allObjects[random % allObjects.size()]);
 		obj->timesUsed++;
 		obj->load();
 		
@@ -715,17 +721,20 @@ void drawObstacle(Obstacle *obs)	{
 	
 	glTranslatef(0.0f, 0.0f, obs->z);
 	
-	if(!strcmp(obs->obj->name, "Torus"))	{
+	if(!obs->obj->name.compare("Torus"))	{
 		glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
 		glRotatef(180.0f, 1.0f, 0.0f, 0.0f);
 		glScalef(1.0f, 1.5f, 1.5f);
 		obs->obj->render(1.0f, true);
-	} else if(!strcmp(obs->obj->name, "Cube"))	{
+	} else if(!obs->obj->name.compare("Cube"))	{
 		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
 		obs->obj->render(1.0f, true);
-	} else if(!strcmp(obs->obj->name, "House"))	{
+	} else if(!obs->obj->name.compare("House"))	{
 		glTranslatef(-5.0, -10.0, 0.0);
 		obs->obj->render(2.0f, true);
+	} else if(!obs->obj->name.compare("Temple"))	{
+		//	glTranslatef(-5.0, -10.0, 0.0);
+		obs->obj->render(0.2f, true);
 	}
 	
 	glPopMatrix();
@@ -765,7 +774,7 @@ void drawObstacles(){
 				obs->obj->unload();
 			
 			obs->z -= obstaclegap * OBJECT_COUNT;
-			obs->obj = &( (*allObjects)[rand() % allObjects->size()] );
+			obs->obj = &( allObjects[rand() % allObjects.size()] );
 			obs->obj->timesUsed++;
 			obs->obj->load();
 			
@@ -789,49 +798,6 @@ void drawObstacles(){
 	}
 	
 	glPopMatrix();
-}
-
-void drawStaticBG()	{
-	glPushAttrib(GL_CURRENT_BIT);
-	glPushMatrix();
-		
-	// Background Texture
-	
-	glTranslatef(0.0f, 350.0f, -1000.0f);
-	glScalef(700.0f, 700.0f, 1.0f);
-
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, bgTex);
-	
-	glBegin(GL_TRIANGLES);
-
-	if(!drawless)
-		glNormal3f(0.0f, 0.0f, 1.0f);
-	
-	glTexCoord2f(1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	
-	glTexCoord2f(1.0f, 1.0f);
-	glVertex3f(1.0f, -1.0f, 0.0f);
-	
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	
-	glTexCoord2f(0.0f, 1.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
-	
-	glTexCoord2f(0.0f, -1.0f);
-	glVertex3f(-1.0f, 1.0f, 1.0f);
-	
-	glTexCoord2f(1.0f, -1.0f);
-	glVertex3f(1.0f, 1.0f, 1.0f);
-	
-	glEnd();
-	
-	glDisable(GL_TEXTURE_2D);
-	
-	glPopMatrix();
-	glPopAttrib();
 }
 
 // glut's Main Display Function

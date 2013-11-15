@@ -1,4 +1,5 @@
 mtllib plane.mtl
+name PaperPlane
 o PaperPlane
 v 2.767644 1.750006 -4.423720
 v 0.523489 1.750006 -4.421782
