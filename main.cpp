@@ -102,20 +102,6 @@ void preGLInit()	{
 	maxY = 12.0f;
 	
 	obstaclegap = 120.0f;
-	allObjects = readOBJ(string(PATH) + "objects.obj");
-	for (int j = 0; j < OBJECT_COUNT; j++)	{
-		int random = rand();
-		Object *obj;
-		obj = &((*allObjects)[random % allObjects->size()]);
-		obj->timesUsed++;
-		obj->load();
-
-		Obstacle *obs;
-		obs = new Obstacle();
-		obs->z = -150.0f - j * obstaclegap;
-		obs->obj = obj;
-		obstaclesList.push_back(obs);
-	}
 
 	for(int i = 0; i < STAR_COUNT; ++i)
 		stars[i] = glm::vec4(maxX * (randf() - 0.5), maxY * (randf() - 0.5), -40.0f - i * stargap, randf());
@@ -192,6 +178,7 @@ void GLInit()	{
 	glFogfv(GL_FOG_COLOR, glm::value_ptr(glm::vec4(glm::vec3(0.8f), 1.0f)));
 	glFogf(GL_FOG_DENSITY, 0.0015f);
 
+	glActiveTexture(GL_TEXTURE0);
 }
 
 // glut's window resize function
@@ -248,7 +235,20 @@ void postGLInit()	{
 	star = (*readOBJ(string(PATH) + "star.obj"))[0];
 	star.load();
 	
-	bgTex = loadTexture(string(PATH) + "bg.sky.ppm");
+	allObjects = readOBJ(string(PATH) + "objects.obj");
+	for (int j = 0; j < OBJECT_COUNT; j++)	{
+		int random = rand();
+		Object *obj;
+		obj = &((*allObjects)[random % allObjects->size()]);
+		obj->timesUsed++;
+		obj->load();
+		
+		Obstacle *obs;
+		obs = new Obstacle();
+		obs->z = -150.0f - j * obstaclegap;
+		obs->obj = obj;
+		obstaclesList.push_back(obs);
+	}
 
 	cout << "Start"<< endl;
 	front = loadTexture(string(PATH) + "front.ppm");
@@ -534,7 +534,7 @@ void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint d
 	glTranslatef(position.x,position.y,position.z);
 
 	glDisable(GL_LIGHTING);
-    glDisable(GL_DEPTH_TEST);       
+    glDisable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);        
     glBindTexture(GL_TEXTURE_2D,back);  
     glBegin(GL_QUADS);      
@@ -608,7 +608,7 @@ void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint d
             glVertex3f(siz/2,-siz/2,-siz/2);
     glEnd();
 	glDisable(GL_TEXTURE_2D);
-    glEnable(GL_LIGHTING);  //turn everything back, which we turned on, and turn everything off, which we have turned on.
+    glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
 
 	// Load Saved Matrix
@@ -717,11 +717,15 @@ void drawObstacle(Obstacle *obs)	{
 	
 	if(!strcmp(obs->obj->name, "Torus"))	{
 		glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
+		glRotatef(180.0f, 1.0f, 0.0f, 0.0f);
 		glScalef(1.0f, 1.5f, 1.5f);
 		obs->obj->render(1.0f, true);
 	} else if(!strcmp(obs->obj->name, "Cube"))	{
 		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
 		obs->obj->render(1.0f, true);
+	} else if(!strcmp(obs->obj->name, "House"))	{
+		glTranslatef(-5.0, -10.0, 0.0);
+		obs->obj->render(2.0f, true);
 	}
 	
 	glPopMatrix();

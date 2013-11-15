@@ -92,9 +92,9 @@ Object::Object()	{
 Object::~Object()	{
 	if(loaded)
 		unload();
-	if(texture)
-		glDeleteTextures( 1, &texture );
-	//delete[] name;
+//	if(texture)
+//		glDeleteTextures( 1, &texture );
+   	//delete[] name;
 }
 
 vector<Object>* readOBJ(string file)	{
