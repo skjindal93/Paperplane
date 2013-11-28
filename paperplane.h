@@ -31,6 +31,7 @@ using namespace std;
 #ifdef __APPLE__
 #include <GLUT/glut.h>
 #include <OpenGL/glext.h>
+#include <OpenAL/al.h>
 #define PATH "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/"
 
 #else

@@ -14,7 +14,7 @@ double randf()	{
 }
 
 struct Obstacle{
-	GLfloat	z;
+	GLfloat	x, y, z;
 	ObjectGroup *obj;
 };
 
@@ -57,7 +57,7 @@ GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
 bool drawless, boost;
-#define SHADOW_MAP_RATIO 5
+#define SHADOW_MAP_RATIO 3.33333333
 glm::vec3 lightpos, lightdir;
 glm::mat4 lightProj, lightView, cameraProj, cameraView;
 GLuint shadowmap, shadowFBO;
@@ -83,7 +83,7 @@ void preGLInit()	{
 	curZ = -5.0f;
 	
 	diffuse = glm::vec3(1.0f);
-	specular = glm::vec3(240.0f, 240.0f, 188.0f)/250.0f;
+	specular = glm::vec3(180.0f, 180.0f, 128.0f)/255.0f;
 	ambient = 1.0f - specular + 0.25f * diffuse;
 	
 	font_style = GLUT_BITMAP_HELVETICA_12;
@@ -110,8 +110,8 @@ void preGLInit()	{
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 	
 	drawless = false;
-	lightpos = glm::vec3(-5.0f, 20.0f, 150.0f);
-	lightdir = -glm::vec3(5.0f, -15.0f, -200.0f);
+	lightpos = glm::vec3(-25.0f, 50.0f, 120.0f);
+	lightdir = -glm::vec3(25.0f, -50.0f, -160.0f);
 	
 	boost = false;
 
@@ -160,11 +160,11 @@ void GLInit()	{
 	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0f)));
 	
 	glEnable(GL_LIGHT1); //Enable light #1
-	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
+	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(glm::vec4(0.0f)));
 	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
-	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
+	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(glm::vec4(0.0f)));
 	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
-	
+
 //	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 	//glFrontFace(GL_CCW);
@@ -252,6 +252,8 @@ void postGLInit()	{
 		Obstacle *obs;
 		obs = new Obstacle();
 		obs->z = -150.0f - j * obstaclegap;
+		obs->x = (randf() - 0.5) * 1.5 * maxX;
+		obs->y = (randf() - 0.5) * 1.5 * maxY;
 		obs->obj = obj;
 		obstaclesList.push_back(obs);
 	}
@@ -362,8 +364,8 @@ void hoverFunc(int x, int y)	{
 		planeX = dx;
 		planeY = dy;
 		
-		center[0] = eye[0] = dx/2.5f;
-		center[1] = eye[1] = dy/2.5f;
+		center[0] = eye[0] = dx/1.5f;
+		center[1] = eye[1] = dy/1.5f;
 
 		vx = 0.2 * (xold - x) + 0.8 * vx;
 		vy = 0.2 * (yold - y) + 0.8 * vy;
@@ -722,19 +724,21 @@ void drawObstacle(Obstacle *obs)	{
 	glTranslatef(0.0f, 0.0f, obs->z);
 	
 	if(!obs->obj->name.compare("Torus"))	{
+		glTranslatef(obs->x, 0.0f, 0.0f);
 		glRotatef(90.0f, 0.0f, 1.0f, 0.0f);
 		glRotatef(180.0f, 1.0f, 0.0f, 0.0f);
 		glScalef(1.0f, 1.5f, 1.5f);
 		obs->obj->render(1.0f, true);
 	} else if(!obs->obj->name.compare("Cube"))	{
+		glTranslatef(obs->x, obs->y, 0.0f);
 		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
 		obs->obj->render(1.0f, true);
 	} else if(!obs->obj->name.compare("House"))	{
+		glTranslatef(obs->x, 0.0f, 0.0f);
+		glScalef(1.2, 1.2, 1.2);
 		glTranslatef(-5.0, -10.0, 0.0);
+		glRotatef(30.0f, 0.0f, 1.0f, 0.0f);
 		obs->obj->render(2.0f, true);
-	} else if(!obs->obj->name.compare("Temple"))	{
-		//	glTranslatef(-5.0, -10.0, 0.0);
-		obs->obj->render(0.2f, true);
 	}
 	
 	glPopMatrix();
@@ -747,7 +751,7 @@ void drawTerrain()	{
 	// Endless Terrain
 	GLfloat size = 300.0f, height = 50.0f;
 	int p = -curZ/size;
-	glTranslatef(0.0f, -30.0f, -(size * p));
+	glTranslatef(0.0f, -20.0f, -(size * p));
 	
 	// What fraction of terrain are we currently on
 	float starting = (-curZ - size * p) / size;
@@ -774,6 +778,8 @@ void drawObstacles(){
 				obs->obj->unload();
 			
 			obs->z -= obstaclegap * OBJECT_COUNT;
+			obs->x = (randf() - 0.5) * 1.5 * maxX;
+			obs->y = (randf() - 0.5) * 1.5 * maxY;
 			obs->obj = &( allObjects[rand() % allObjects.size()] );
 			obs->obj->timesUsed++;
 			obs->obj->load();
@@ -830,7 +836,7 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraView));
 	
 	glLoadIdentity();
-	glOrtho(-100.0f, 100.0f, -50.0f, 50.0f, 10.0f, 1000.0f);
+	glOrtho(-100.0f, 100.0f, -25.0f, 150.0f, 75.0f, 1000.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProj));
 	
 	glLoadIdentity();
@@ -990,7 +996,7 @@ void display()	{
 		glAccum(GL_RETURN, 1.0);
 	}
 	else if(collide)	{
-		cout << "Hawwwwwww!\n";
+		cout << "Collision!\n";
 		pause();
 	}
 	
