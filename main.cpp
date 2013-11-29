@@ -606,7 +606,7 @@ void drawStar(float rotOffset = 0.0f)	{
 void drawStars()	{
 	glPushMatrix();
 		
-	if(stars[0][2] > eye[2])	{
+	if(stars[0][2] > eye[2] - 5.0f)	{
 		stars[0].x = maxX * (randf() - 0.5);
 		stars[0].y = maxY * (randf() - 0.5);
 		stars[0].z -= stargap * STAR_COUNT;
@@ -688,6 +688,7 @@ void drawObstacle(Obstacle *obs)	{
 	} else if(!obs->obj->name.compare("Cube"))	{
 		glTranslatef(obs->x, obs->y, 0.0f);
 		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
+		glScalef(2.0f, 2.0f, 2.0f);
 		obs->obj->render(1.0f, true);
 	} else if(!obs->obj->name.compare("House"))	{
 		glTranslatef(obs->x, 0.0f, 0.0f);
@@ -729,7 +730,7 @@ void drawObstacles(){
 		Obstacle *obs;
 		obs = obstaclesList[j];
 		
-		if (obs->z > eye[2]) {
+		if (obs->z > eye[2] - 5.0f) {
 			if(! --obs->obj->timesUsed)
 				obs->obj->unload();
 			
