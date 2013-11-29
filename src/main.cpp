@@ -228,27 +228,27 @@ void postGLInit()	{
 		shaders.push_back(s);
 	}
 #ifdef __APPLE__
-	shaders[0].init(string(PATH) + "tex.vs", string(PATH) + "glowtex.apple.fs");
+	shaders[0].init(string(PATH) + "shaders/tex.vs", string(PATH) + "shaders/glowtex.apple.fs");
 #else
-	shaders[0].init(string(PATH) + "tex.vs", string(PATH) + "glowtex.fs");
+	shaders[0].init(string(PATH) + "shaders/tex.vs", string(PATH) + "shaders/glowtex.fs");
 #endif
 	
-	Image *img = readP3(string(PATH) + "heightmap.desert.ppm");
+	Image *img = readP3(string(PATH) + "textures/heightmap.desert.ppm");
 	if(img != NULL)
-		terr = new Terrain(img, string(PATH) + "colormap.desert.ppm", 10);
+		terr = new Terrain(img, string(PATH) + "textures/colormap.desert.ppm", 10);
 	
-	plane.readOBJ(string(PATH) + "plane.obj");
+	plane.readOBJ(string(PATH) + "objects/plane.obj");
 	plane.load();
 	plane.save = true;
 	
-	star.readOBJ(string(PATH) + "star.obj");
+	star.readOBJ(string(PATH) + "objects/star.obj");
 	star.load();
 	
 	allObjects.clear();
 	allObjects.resize(3);
-	allObjects[0].readOBJ(string(PATH) + "torus.obj");
-	allObjects[1].readOBJ(string(PATH) + "cube.obj");
-	allObjects[2].readOBJ(string(PATH) + "house.obj");
+	allObjects[0].readOBJ(string(PATH) + "objects/torus.obj");
+	allObjects[1].readOBJ(string(PATH) + "objects/cube.obj");
+	allObjects[2].readOBJ(string(PATH) + "objects/house.obj");
 	
 	for (int j = 0; j < OBJECT_COUNT; j++)	{
 		int random = rand();
@@ -256,7 +256,7 @@ void postGLInit()	{
 		obj = &(allObjects[random % allObjects.size()]);
 		obj->timesUsed++;
 		obj->load();
-		
+
 		Obstacle *obs;
 		obs = new Obstacle();
 		obs->z = -150.0f - j * obstaclegap;
@@ -267,7 +267,7 @@ void postGLInit()	{
 	}
 
 	
-	environment = loadTexture(string(PATH) + "environment.ppm");
+	environment = loadTexture(string(PATH) + "textures/environment.ppm");
 	
 	//Load identity modelview
 	glMatrixMode(GL_MODELVIEW);

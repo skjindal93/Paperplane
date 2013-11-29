@@ -1,4 +1,4 @@
-mtllib plane.mtl
+mtllib objects/plane.mtl
 name PaperPlane
 o PaperPlane
 v 2.767644 1.750006 -4.423720

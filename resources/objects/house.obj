@@ -2,7 +2,7 @@
 # www.blender.org
 name House
 o House
-usetex house.ppm
+usetex textures/house.ppm
 v 0.094287 6.483213 -3.997809
 v 0.094288 6.483213 4.004940
 v 0.104257 6.482208 -3.997809

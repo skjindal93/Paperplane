@@ -27,18 +27,18 @@ void al::init()	{
 	}
 
 	char music[200];
-	strcpy(music, (string(PATH) + "h2h.wav").c_str());
+	strcpy(music, (string(PATH) + "sounds/h2h.wav").c_str());
 
 	alutLoadWAVFile(music, &format, &data, &size, &freq);
 	alBufferData(buffer[0],format,data,size,freq);
 	alutUnloadWAV(format, data, size, freq);
 
-	strcpy(music, (string(PATH) + "star.wav").c_str());
+	strcpy(music, (string(PATH) + "sounds/star.wav").c_str());
 	alutLoadWAVFile(music, &format, &data, &size, &freq);
 	alBufferData(buffer[1],format,data,size,freq);
 	alutUnloadWAV(format, data, size, freq);
 
-	strcpy(music, (string(PATH) + "end.wav").c_str());
+	strcpy(music, (string(PATH) + "sounds/end.wav").c_str());
 	alutLoadWAVFile(music, &format, &data, &size, &freq);
 	alBufferData(buffer[2],format,data,size,freq);
 	alutUnloadWAV(format, data, size, freq);

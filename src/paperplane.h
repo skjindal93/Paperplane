@@ -32,7 +32,7 @@ using namespace std;
 #include <GLUT/glut.h>
 #include <OpenGL/glext.h>
 #include <AL/alut.h>
-#define PATH "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/"
+#define PATH "resources/"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #else
@@ -53,9 +53,9 @@ using namespace std;
 #endif
 
 /* GLM */
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
+#include "../glm/glm.hpp"
+#include "../glm/gtc/matrix_transform.hpp"
+#include "../glm/gtc/type_ptr.hpp"
 
 /* Project Libraries */
 #include "al.h"

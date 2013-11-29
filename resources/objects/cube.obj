@@ -2,7 +2,7 @@
 # www.blender.org
 name Cube
 o Cube
-usetex cube.ppm
+usetex textures/cube.ppm
 v 1.000000 -1.000000 -1.000000
 v 1.000000 -1.000000 1.000000
 v -1.000000 -1.000000 1.000000

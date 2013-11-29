@@ -1,9 +1,9 @@
 # Blender v2.68 (sub 0) OBJ File: 'torus.blend'
 # www.blender.org
-mtllib objects.mtl
+mtllib objects/objects.mtl
 name Torus
 o Torus
-usetex wheel.ppm
+usetex textures/wheel.ppm
 v -0.321723 -2.016542 0.000000
 v -0.557240 -2.252059 0.000000
 v -0.643445 -2.573782 0.000000
