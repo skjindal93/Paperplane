@@ -63,5 +63,6 @@ using namespace std;
 #include "terrain.h"
 #include "object.h"
 #include "shading.h"
+#include "explosion.h"
 
 #endif

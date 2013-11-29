@@ -620,6 +620,7 @@ void drawStars()	{
 	
 	if(fabs(planeX - stars[0].x) < 2.0f && fabs(planeY - stars[0].y) < 2.0f && fabs(curZ - 5.0f - stars[0].z) < 1.0f && stars[0][3] >= 0.0f)	{
 		score ++;
+		newExplosion(stars[0].x, stars[0].y, stars[0].z);
 		openal.play(1);
 		stars[0][3] = -1.0f;
 	}
@@ -957,6 +958,7 @@ void display()	{
 
 	glDisable(GL_ALPHA_TEST);
 	glEnable(GL_BLEND);
+	exp();
 	drawStars();
 
 	if(boost)	{
@@ -1005,8 +1007,8 @@ void iter(int single)	{
 		
 	}
 	
-	eye[2] = curZ + 5.0f;
-	center[2] = curZ - 5.0f;
+	eye[2] = curZ + 10.0f;
+	center[2] = curZ - 10.0f;
 	
 	if(!hovered)	{
 		vx *= 0.8;
@@ -1048,7 +1050,8 @@ int main(int argc, char * argv[])		{
 	
 	// Set up the callback function for resizing windows
 	glutReshapeFunc( resizeWindow );
-	
+
+	//glutIdleFunc(idle);
 	// Click
 	glutMouseFunc(clickFunc);
 	// Drag
