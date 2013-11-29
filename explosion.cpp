@@ -9,11 +9,10 @@ struct particleData
     float   speed[3];
     float   color[3];
 };
-typedef struct particleData    particleData;
+typedef struct particleData particleData;
 
 
 /* A piece of debris */
-
 struct debrisData
 {
     float   position[3];
@@ -23,23 +22,16 @@ struct debrisData
     float   color[3];
     float   scale[3];
 };
-typedef struct debrisData    debrisData;
+typedef struct debrisData debrisData;
 
 
 /* Globals */
-
 particleData     particles[NUM_PARTICLES];
 debrisData       debris[NUM_DEBRIS];
 int              fuel = 0;                /* "fuel" of the explosion */
 
-/*
- * newSpeed
- *
- * Randomize a new speed vector.
- *
- */
-void
-newSpeed (float dest[3])
+// Randomize a new speed vector.
+void newSpeed (float dest[3])
 {
     float    x;
     float    y;
@@ -67,13 +59,7 @@ newSpeed (float dest[3])
 }
 
 
-/*
- * newExplosion
- *
- * Create a new explosion.
- *
- */
-
+// Create a new explosion.
 void newExplosion (int x, int y, int z)
 {
     int i;
@@ -121,9 +107,7 @@ void newExplosion (int x, int y, int z)
 
 void exp(void){
     int i;
-    
-//    glLoadIdentity();
-	
+
     if (fuel > 0)
     {
         glPushAttrib(GL_ENABLE_BIT);
@@ -213,12 +197,4 @@ void exp(void){
 
         --fuel;
 	}
-}
-
-void idle (void)
-{
-
-    
-    
-	//    glutPostRedisplay ();
 }

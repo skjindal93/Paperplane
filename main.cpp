@@ -40,7 +40,6 @@ Terrain *terr;
 glm::vec3 specular, diffuse, ambient;
 int t1, t2, frameCount, lastCount;
 GLfloat fps;
-GLvoid *font_style;
 ObjectGroup plane, star;
 Material terrMaterial;
 GLuint bgTex;
@@ -97,8 +96,6 @@ void preGLInit()	{
 	diffuse = glm::vec3(1.0f);
 	specular = glm::vec3(180.0f, 180.0f, 128.0f)/255.0f;
 	ambient = 1.0f - specular + 0.25f * diffuse;
-	
-	font_style = GLUT_BITMAP_HELVETICA_12;
 	
 	t1 = glutGet(GLUT_ELAPSED_TIME);
 	frameCount = lastCount = 0;
@@ -609,7 +606,7 @@ void drawStar(float rotOffset = 0.0f)	{
 void drawStars()	{
 	glPushMatrix();
 		
-	if(stars[0][2] > curZ)	{
+	if(stars[0][2] > eye[2])	{
 		stars[0].x = maxX * (randf() - 0.5);
 		stars[0].y = maxY * (randf() - 0.5);
 		stars[0].z -= stargap * STAR_COUNT;
@@ -732,7 +729,7 @@ void drawObstacles(){
 		Obstacle *obs;
 		obs = obstaclesList[j];
 		
-		if (obs->z > curZ) {
+		if (obs->z > eye[2]) {
 			if(! --obs->obj->timesUsed)
 				obs->obj->unload();
 			
@@ -1051,7 +1048,6 @@ int main(int argc, char * argv[])		{
 	// Set up the callback function for resizing windows
 	glutReshapeFunc( resizeWindow );
 
-	//glutIdleFunc(idle);
 	// Click
 	glutMouseFunc(clickFunc);
 	// Drag
