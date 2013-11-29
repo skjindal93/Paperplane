@@ -64,6 +64,7 @@ GLuint shadowmap, shadowFBO;
 GLuint stars_tex, fbo, depthbuf;
 GLuint front, back, lefty, righty, upper, down;
 GLfloat starsW, starsH, shadowW, shadowH;
+al openal;
 
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
@@ -663,6 +664,7 @@ void drawStars()	{
 	
 	if(fabs(planeX - stars[0].x) < 2.0f && fabs(planeY - stars[0].y) < 2.0f && fabs(curZ - 5.0f - stars[0].z) < 1.0f && stars[0][3] >= 0.0f)	{
 		score ++;
+		openal.play(1);
 		stars[0][3] = -1.0f;
 	}
 	
@@ -997,6 +999,7 @@ void display()	{
 	}
 	else if(collide)	{
 		cout << "Collision!\n";
+		openal.play(2);
 		pause();
 	}
 	
@@ -1045,7 +1048,8 @@ void iter(int single)	{
 
 int main(int argc, char * argv[])		{
 	srand((unsigned)time(NULL));
-	
+	openal.init();
+
 	// Need to double buffer for animation
 	glutInit(&argc,argv);
 	glutInitDisplayMode( GLUT_ACCUM | GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH | GLUT_MULTISAMPLE);
@@ -1083,6 +1087,7 @@ int main(int argc, char * argv[])		{
 	glutTimerFunc(0, iter, 0);
 	
 	// Start the main loop.  glutMainLoop never returns.
+	openal.play(0);
 	glutMainLoop(  );
     
 	return 0;
