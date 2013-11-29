@@ -65,19 +65,19 @@ GLuint stars_tex, fbo, depthbuf;
 GLuint environment;
 GLfloat starsW, starsH, shadowW, shadowH;
 al openal;
-GLfloat timeCollision;
+GLfloat collisionFrame;
+bool ended;
 
 float shake(){
-    float time = frameCount - timeCollision;
-    cout << time << endl;
+    float time = frameCount - collisionFrame;
     float sinCollision = 4.0f * sin (time / 200.0f);
     float sin2Collision = 1.5f * sin (time / 1.0f);
     float expCollision = exp2f(-time/25.0f) * sin2Collision + sinCollision;
     return eye[1] + expCollision;
-    
 }
 
 void preGLInit()	{
+	ended = false;
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
 	zoom = 1.0f;
 	
@@ -250,9 +250,8 @@ void postGLInit()	{
 	allObjects.clear();
 	allObjects.resize(3);
 	allObjects[0].readOBJ(string(PATH) + "torus.obj");
-	allObjects[1].readOBJ(string(PATH) + "ped.obj");
+	allObjects[1].readOBJ(string(PATH) + "cube.obj");
 	allObjects[2].readOBJ(string(PATH) + "house.obj");
-	//allObjects[3].readOBJ(string(PATH) + "temple.obj");
 	
 	for (int j = 0; j < OBJECT_COUNT; j++)	{
 		int random = rand();
@@ -305,6 +304,7 @@ void pause()	{
 }
 
 void resume(int single = 0)	{
+	ended = false;
 	run = single ^ 1;
 	xold = xpaused;
 	yold = ypaused;
@@ -330,21 +330,21 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 	switch (key) {
 		
 		case ' ':
-          if(collide)
-              resume();
-        else
-			run ? pause() : resume();
+			if(ended)
+				resume();
+			else
+				run ? pause() : resume();
 			break;
-		
+
 		case 13:
-            if (!collide)
-			run ? pause() : resume(1);
+            if (!ended)
+				run ? pause() : resume(1);
 			break;
 			
 		case 'n':
 		case 'N':
-            if (!collide)
-			boost = !boost;
+            if (!ended)
+				boost = !boost;
 			break;
 			
 		case 27:                                    // "27" is theEscape key
@@ -358,7 +358,7 @@ void specialKeys(int k, int x, int y)	{
 }
 
 void hoverFunc(int x, int y)	{
-    if (collide)
+    if (ended)
         return;
 	if(run)	{
 		GLint w = wHi - wLo;
@@ -428,9 +428,9 @@ void pan(int x, int y)	{
 }
 
 void dragFunc(int x, int y)	{
-    if (!collide){
-	pan(x,y);
-	glutPostRedisplay();
+    if (!ended){
+		pan(x,y);
+		glutPostRedisplay();
     }
 }
 
@@ -450,7 +450,7 @@ void setFrameBuffer(GLuint fbuf)	{
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
 	
 	up = glm::normalize(up);
-    if (collide)
+    if (ended)
         gluLookAt(eye[0],shake(), eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
     else
         gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
@@ -595,8 +595,8 @@ void drawStar(float rotOffset = 0.0f)	{
 	
 	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
 	glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
-    if(collide)
-     glRotatef(360.0f*((double)(((int)(timeCollision+0.5)/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
+    if(ended)
+     glRotatef(360.0f*((double)(((int)(collisionFrame+0.5)/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
         else
 	glRotatef(360.0f*((double)((frameCount/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
 	glScalef(0.5f, 0.75f, 0.5f);
@@ -790,7 +790,7 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraProj));
 	
 	glLoadIdentity();
-    if (collide)
+    if (ended)
         gluLookAt(eye[0],shake(), eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
     else
         gluLookAt(eye.x, eye.y, eye.z,
@@ -803,7 +803,7 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProj));
 	
 	glLoadIdentity();
-    if (collide)
+    if (ended)
         gluLookAt(eye[0],shake(), eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
     else
         gluLookAt(lightpos.x, lightpos.y, lightpos.z,
@@ -828,7 +828,6 @@ void display()	{
 	// Begin actual stuff
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	setFrameBuffer(shadowFBO);
-	//collide = false;
 	
 	drawless = true;
 	glDisable(GL_LIGHTING);
@@ -960,18 +959,15 @@ void display()	{
 		glAccum(GL_MULT, 0.5);
 		glAccum(GL_ACCUM, 0.5);
 		glAccum(GL_RETURN, 1.0);
-        collide = false;
 	}
-	else if(collide)	{
+	else if(collide && !ended)	{
+		ended = 1;
+		cout << "Collision!\n";
+		openal.play(2);
 		pause();
-		if(step)    {
-			cout << "Collision!\n";
-			openal.play(2);
-			pause();
-			run = 1;
-			timeCollision = frameCount;
-			step = 0;
-		}
+		run = 1;
+		collisionFrame = frameCount;
+		step = 0;
 	}
 	
 	glutSwapBuffers();
