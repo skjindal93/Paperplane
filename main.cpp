@@ -57,7 +57,7 @@ GLfloat planeFarZ;
 int xpaused, ypaused;
 vector<Shader> shaders;
 bool drawless, boost;
-#define SHADOW_MAP_RATIO 3.33333333
+#define SHADOW_MAP_RATIO 3
 glm::vec3 lightpos, lightdir;
 glm::mat4 lightProj, lightView, cameraProj, cameraView;
 GLuint shadowmap, shadowFBO;
@@ -122,8 +122,8 @@ void preGLInit()	{
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 	
 	drawless = false;
-	lightpos = glm::vec3(-25.0f, 50.0f, 120.0f);
-	lightdir = -glm::vec3(25.0f, -50.0f, -160.0f);
+	lightpos = glm::vec3(-25.0f, 75.0f, 120.0f);
+	lightdir = -glm::vec3(25.0f, -75.0f, -160.0f);
 
 	boost = false;
 
@@ -580,7 +580,7 @@ void RenderSkybox(glm::vec3 position,GLuint environment)
 
 void drawPlane()	{
 	glPushMatrix();
-	
+
 	glTranslatef(planeX, planeY, -5.0f);
 	glRotatef(vx * 1.5, 0.0f, 0.0f, 1.0f);
 	glRotatef(10.0f, 1.0f, 0.0f, 0.0f);
@@ -768,12 +768,8 @@ void drawObstacles(){
 void drawScene()	{
 	glPushMatrix();
 
-	if(!drawless)	{
-		glTranslatef(0.0f, 0.0f, curZ);
-		drawPlane();
-		glTranslatef(0.0f, 0.0f, -curZ);
+	if(!drawless)
 		drawTerrain();
-	}
 
 	drawObstacles();
 	
@@ -844,7 +840,7 @@ void display()	{
 	// Don't use lightView, to avoid shadow acne
 	//	glLoadMatrixf(glm::value_ptr(lightView));
 	// Instead, let's move the light a little bit towards the center.
-	glm::vec3 _pos = lightpos + (3 * 1e-3f * lightdir);
+	glm::vec3 _pos = lightpos + (2 * 1e-3f * lightdir);
 	gluLookAt(_pos.x, _pos.y, _pos.z,
 			  lightpos.x - lightdir.x, lightpos.y - lightdir.y, lightpos.z - lightdir.z,
 			  0.0f, 1.0f, 0.0f);
@@ -852,6 +848,9 @@ void display()	{
 	//Use viewport the same size as the shadow map
 	glViewport(0, 0, shadowW, shadowH);
 
+	glTranslatef(0.0f, 0.0f, curZ);
+	drawPlane();
+	glTranslatef(0.0f, 0.0f, -curZ);
 	drawScene();
 
 	//2nd pass - Draw from camera's point of view
@@ -882,6 +881,10 @@ void display()	{
 	glTranslatef(0.0f, 0.0f, curZ);
 	RenderSkybox(glm::vec3(0.0f, -150.0f, 0.0f), environment);
 	glTranslatef(0.0f, 0.0f, -curZ);
+
+	glTranslatef(0.0f, 0.0f, curZ);
+	drawPlane();
+	glTranslatef(0.0f, 0.0f, -curZ);
 	drawScene();
 
 	//3rd pass
@@ -899,7 +902,11 @@ void display()	{
 							0.5f, 0.5f, 0.5f, 1.0f	);	//bias from [-1, 1] to [0, 1]
 	glm::mat4 textureMatrix = biasMatrix * lightProj * lightView;
 	glm::mat4 texTrans = glm::transpose(textureMatrix);
-	
+
+	glTranslatef(0.0f, 0.0f, curZ);
+	drawPlane();
+	glTranslatef(0.0f, 0.0f, -curZ);
+
 	glActiveTexture(GL_TEXTURE5);
 		//Bind & enable shadow map texture
 		glBindTexture(GL_TEXTURE_2D, shadowmap);
@@ -956,6 +963,7 @@ void display()	{
 		glAccum(GL_MULT, 0.5);
 		glAccum(GL_ACCUM, 0.5);
 		glAccum(GL_RETURN, 1.0);
+		collide = ended = 0;
 	}
 	else if(collide && !ended)	{
 		ended = 1;
