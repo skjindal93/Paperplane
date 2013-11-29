@@ -33,6 +33,7 @@ using namespace std;
 #include <OpenGL/glext.h>
 #include <AL/alut.h>
 #define PATH "/Users/shivanker/Workplace/V Semester/Graphics/PaperPlane/PaperPlane/"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #else
 #ifdef _WIN32
