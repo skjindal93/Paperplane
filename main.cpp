@@ -799,14 +799,11 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraView));
 	
 	glLoadIdentity();
-	glOrtho(-100.0f, 100.0f, -25.0f, 150.0f, 75.0f, 1000.0f);
+	glOrtho(-100.0f, 100.0f, -35.0f, 150.0f, 75.0f, 1000.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProj));
 	
 	glLoadIdentity();
-    if (ended)
-        gluLookAt(eye[0],shake(), eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
-    else
-        gluLookAt(lightpos.x, lightpos.y, lightpos.z,
+	gluLookAt(lightpos.x, lightpos.y, lightpos.z,
 			  lightpos.x - lightdir.x, lightpos.y - lightdir.y, lightpos.z - lightdir.z,
 			  0.0f, 1.0f, 0.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightView));
