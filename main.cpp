@@ -62,9 +62,19 @@ glm::vec3 lightpos, lightdir;
 glm::mat4 lightProj, lightView, cameraProj, cameraView;
 GLuint shadowmap, shadowFBO;
 GLuint stars_tex, fbo, depthbuf;
-GLuint front, back, lefty, righty, upper, down;
+GLuint environment;
 GLfloat starsW, starsH, shadowW, shadowH;
+GLfloat timeCollision;
 
+float shake(){
+    float time = frameCount - timeCollision;
+    cout << time << endl;
+    float sinCollision = 4.0f * sin (time / 200.0f);
+    float sin2Collision = 1.5f * sin (time / 1.0f);
+    float expCollision = exp2f(-time/25.0f) * sin2Collision + sinCollision;
+    return eye[1] + expCollision;
+    
+}
 void preGLInit()	{
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
 	zoom = 1.0f;
@@ -73,7 +83,7 @@ void preGLInit()	{
 	up = glm::vec3(0.0f);
 	up[1] = 1.0f;
 	center = glm::vec3(0.0f);
-	center[2] = -10.0f;
+	center[2] = -100.0f;
 	
 	step = 2.0f;
 	slices = 150;
@@ -83,7 +93,7 @@ void preGLInit()	{
 	curZ = -5.0f;
 	
 	diffuse = glm::vec3(1.0f);
-	specular = glm::vec3(240.0f, 240.0f, 188.0f)/250.0f;
+	specular = glm::vec3(180.0f, 180.0f, 128.0f)/255.0f;
 	ambient = 1.0f - specular + 0.25f * diffuse;
 	
 	font_style = GLUT_BITMAP_HELVETICA_12;
@@ -110,8 +120,8 @@ void preGLInit()	{
 	score = xold = yold = vx = vy = hovered = xpaused = ypaused = 0;
 	
 	drawless = false;
-	lightpos = glm::vec3(-5.0f, 20.0f, 150.0f);
-	lightdir = -glm::vec3(5.0f, -15.0f, -200.0f);
+	lightpos = glm::vec3(-25.0f, 75.0f, 120.0f);
+	lightdir = -glm::vec3(25.0f, -65.0f, -160.0f);
 	
 	boost = false;
 
@@ -160,11 +170,11 @@ void GLInit()	{
 	glLightfv(GL_LIGHT0, GL_POSITION, glm::value_ptr(glm::vec4(lightdir, 0.0f)));
 	
 	glEnable(GL_LIGHT1); //Enable light #1
-	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(specular));
+	glLightfv(GL_LIGHT1, GL_SPECULAR, glm::value_ptr(glm::vec4(0.0f)));
 	glLightfv(GL_LIGHT1, GL_DIFFUSE,  glm::value_ptr(diffuse));
-	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(ambient));
+	glLightfv(GL_LIGHT1, GL_AMBIENT,  glm::value_ptr(glm::vec4(0.0f)));
 	glLightfv(GL_LIGHT1, GL_POSITION, glm::value_ptr(glm::vec4(0.0f, 200.0f, -2000.0f, 0.0f)));
-	
+
 //	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE);
 	//glFrontFace(GL_CCW);
@@ -238,7 +248,7 @@ void postGLInit()	{
 	allObjects.clear();
 	allObjects.resize(3);
 	allObjects[0].readOBJ(string(PATH) + "torus.obj");
-	allObjects[1].readOBJ(string(PATH) + "cube.obj");
+	allObjects[1].readOBJ(string(PATH) + "ped.obj");
 	allObjects[2].readOBJ(string(PATH) + "house.obj");
 	//allObjects[3].readOBJ(string(PATH) + "temple.obj");
 	
@@ -256,21 +266,9 @@ void postGLInit()	{
 		obstaclesList.push_back(obs);
 	}
 
-	cout << "Start"<< endl;
-	front = loadTexture(string(PATH) + "front.ppm");
-	cout << "Read Front"<< endl;
-	upper = loadTexture(string(PATH) + "up.ppm");
-	cout << "Read Up"<< endl;
-	back = loadTexture(string(PATH) + "back.ppm");
-	cout << "Read Back"<< endl;
 	
-	lefty = loadTexture(string(PATH) + "left.ppm");
-	cout << "Read Left"<< endl;
-	righty = loadTexture(string(PATH) + "right.ppm");
-	cout << "Read Right	"<< endl;
-	down = loadTexture(string(PATH) + "down.ppm");
-	cout << "Read Down"<< endl;
-
+	environment = loadTexture(string(PATH) + "environment.ppm");
+	
 	//Load identity modelview
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -311,6 +309,8 @@ void resume(int single = 0)	{
 	zoom = 1.0f;
 	resizeWindow(winW, winH);
 	center[0] = center[1] = eye[0] = eye[1] = 0.0f;
+    step = 2.0f;
+    collide = false;
 	glutTimerFunc(1, iter, single);
 }
 
@@ -326,15 +326,20 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 	switch (key) {
 		
 		case ' ':
+          if(collide)
+              resume();
+        else
 			run ? pause() : resume();
 			break;
 		
 		case 13:
+            if (!collide)
 			run ? pause() : resume(1);
 			break;
 			
 		case 'n':
 		case 'N':
+            if (!collide)
 			boost = !boost;
 			break;
 			
@@ -349,6 +354,8 @@ void specialKeys(int k, int x, int y)	{
 }
 
 void hoverFunc(int x, int y)	{
+    if (collide)
+        return;
 	if(run)	{
 		GLint w = wHi - wLo;
 		GLint h = hHi - hLo;
@@ -417,8 +424,10 @@ void pan(int x, int y)	{
 }
 
 void dragFunc(int x, int y)	{
+    if (!collide){
 	pan(x,y);
 	glutPostRedisplay();
+    }
 }
 
 
@@ -437,7 +446,10 @@ void setFrameBuffer(GLuint fbuf)	{
 	glLoadIdentity(); // Load the Identity Matrix to reset our drawing locations
 	
 	up = glm::normalize(up);
-	gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
+    if (collide)
+        gluLookAt(eye[0],shake(), eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
+    else
+        gluLookAt(eye[0], eye[1], eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
 }
 
 // generate an FBO
@@ -528,91 +540,30 @@ void genDepthFBO(GLuint *fb, GLuint *depth, int w, int h)	{
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void RenderSkybox(glm::vec3 position,GLuint front,GLuint back,GLuint up,GLuint down,GLuint left,GLuint right,GLfloat siz)
+void RenderSkybox(glm::vec3 position,GLuint environment)
 {
 	// Save Current Matrix
 	glPushMatrix();
 	glPushAttrib(GL_ENABLE_BIT);
 	
-	glColor4f(1.0, 1.0, 1.0,1.0f);
+    glColor4f(1.0, 1.0, 1.0,1.0f);
  
 	// Second Move the render space to the correct position (Translate)
-	glTranslatef(position.x,position.y,position.z);
+    glTranslatef(position.x,position.y,position.z);
 
-	glDisable(GL_LIGHTING);
+    glDisable(GL_LIGHTING);
     glDisable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_2D);        
-    glBindTexture(GL_TEXTURE_2D,back);  
-    glBegin(GL_QUADS);      
-            //back face
-            glTexCoord2f(0,0);
-            glVertex3f(siz/2,siz/2,siz/2);       
-            glTexCoord2f(1,0);      
-            glVertex3f(-siz/2,siz/2,siz/2);
-            glTexCoord2f(1,1);
-            glVertex3f(-siz/2,-siz/2,siz/2);
-            glTexCoord2f(0,1);
-            glVertex3f(siz/2,-siz/2,siz/2);
-    glEnd();
-    glBindTexture(GL_TEXTURE_2D,left);
-    glBegin(GL_QUADS);     
-            //left face
-            glTexCoord2f(0,0);
-            glVertex3f(-siz/2,siz/2,siz/2);
-            glTexCoord2f(1,0);
-            glVertex3f(-siz/2,siz/2,-siz/2);
-            glTexCoord2f(1,1);
-            glVertex3f(-siz/2,-siz/2,-siz/2);
-            glTexCoord2f(0,1);
-            glVertex3f(-siz/2,-siz/2,siz/2);
-    glEnd();
-    glBindTexture(GL_TEXTURE_2D,front);
-    glBegin(GL_QUADS);     
-            //front face
-            glTexCoord2f(1,0);
-            glVertex3f(siz/2,siz/2,-siz/2);
-            glTexCoord2f(0,0);
-            glVertex3f(-siz/2,siz/2,-siz/2);
-            glTexCoord2f(0,1);
-            glVertex3f(-siz/2,-siz/2,-siz/2);
-            glTexCoord2f(1,1);
-            glVertex3f(siz/2,-siz/2,-siz/2);
-    glEnd();
-    glBindTexture(GL_TEXTURE_2D,right);
-    glBegin(GL_QUADS);     
-            //right face
-            glTexCoord2f(0,0);
-            glVertex3f(siz/2,siz/2,-siz/2);
-            glTexCoord2f(1,0);
-            glVertex3f(siz/2,siz/2,siz/2);
-            glTexCoord2f(1,1);
-            glVertex3f(siz/2,-siz/2,siz/2);
-            glTexCoord2f(0,1);
-            glVertex3f(siz/2,-siz/2,-siz/2);
-    glEnd();
-    glBindTexture(GL_TEXTURE_2D,up);          
-    glBegin(GL_QUADS);                      //top face
-            glTexCoord2f(1,0);
-            glVertex3f(siz/2,siz/2,siz/2);
-            glTexCoord2f(0,0);
-            glVertex3f(-siz/2,siz/2,siz/2);
-            glTexCoord2f(0,1);
-            glVertex3f(-siz/2,siz/2,-siz/2);
-            glTexCoord2f(1,1);
-            glVertex3f(siz/2,siz/2,-siz/2);
-    glEnd();
-	glBindTexture(GL_TEXTURE_2D,down);               
-    glBegin(GL_QUADS);     
-            //bottom face
-            glTexCoord2f(1,1);
-            glVertex3f(siz/2,-siz/2,siz/2);
-            glTexCoord2f(0,1);
-            glVertex3f(-siz/2,-siz/2,siz/2);
-            glTexCoord2f(0,0);
-            glVertex3f(-siz/2,-siz/2,-siz/2);
-            glTexCoord2f(1,0);
-            glVertex3f(siz/2,-siz/2,-siz/2);
-    glEnd();
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D,environment);
+    glTexGeni(GL_S, GL_TEXTURE_GEN_MODE, GL_SPHERE_MAP);
+    glTexGeni(GL_T,GL_TEXTURE_GEN_MODE,GL_SPHERE_MAP);
+    glEnable(GL_TEXTURE_GEN_S);
+    glEnable(GL_TEXTURE_GEN_T);
+	
+	gluSphere(myQuadric,500,100,100);
+    
+	glDisable(GL_TEXTURE_GEN_S);
+	glDisable(GL_TEXTURE_GEN_T);
 	glDisable(GL_TEXTURE_2D);
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
@@ -635,10 +586,14 @@ void drawPlane()	{
 }
 
 void drawStar(float rotOffset = 0.0f)	{
+    
 	glPushMatrix();
 	
 	glRotatef(90.0f, 1.0f, 0.0f, 0.0f);
 	glRotatef(180.0f, 0.0f, 0.0f, 1.0f);
+    if(collide)
+     glRotatef(360.0f*((double)(((int)(timeCollision+0.5)/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
+        else
 	glRotatef(360.0f*((double)((frameCount/2) % 50)/50.0f + rotOffset), 0.0f, 0.0f, 1.0f);
 	glScalef(0.5f, 0.75f, 0.5f);
 	
@@ -726,15 +681,14 @@ void drawObstacle(Obstacle *obs)	{
 		glRotatef(180.0f, 1.0f, 0.0f, 0.0f);
 		glScalef(1.0f, 1.5f, 1.5f);
 		obs->obj->render(1.0f, true);
-	} else if(!obs->obj->name.compare("Cube"))	{
+	} else if(!obs->obj->name.compare("Ped"))	{
 		glRotatef(45.0f, 1.0f, 1.0f, 0.0f);
 		obs->obj->render(1.0f, true);
 	} else if(!obs->obj->name.compare("House"))	{
+		glScalef(1.2, 1.2, 1.2);
 		glTranslatef(-5.0, -10.0, 0.0);
+		glRotatef(30.0f, 0.0f, 1.0f, 0.0f);
 		obs->obj->render(2.0f, true);
-	} else if(!obs->obj->name.compare("Temple"))	{
-		//	glTranslatef(-5.0, -10.0, 0.0);
-		obs->obj->render(0.2f, true);
 	}
 	
 	glPopMatrix();
@@ -747,7 +701,7 @@ void drawTerrain()	{
 	// Endless Terrain
 	GLfloat size = 300.0f, height = 50.0f;
 	int p = -curZ/size;
-	glTranslatef(0.0f, -30.0f, -(size * p));
+	glTranslatef(0.0f, -20.0f, -(size * p));
 	
 	// What fraction of terrain are we currently on
 	float starting = (-curZ - size * p) / size;
@@ -803,12 +757,14 @@ void drawObstacles(){
 // glut's Main Display Function
 void drawScene()	{
 	glPushMatrix();
-	
-	glTranslatef(0.0f, 0.0f, curZ);
-	drawPlane();
-	glTranslatef(0.0f, 0.0f, -curZ);
-	if(!drawless)
+
+	if(!drawless)	{
+		glTranslatef(0.0f, 0.0f, curZ);
+		drawPlane();
+		glTranslatef(0.0f, 0.0f, -curZ);
 		drawTerrain();
+	}
+
 	drawObstacles();
 	
 	glPopMatrix();
@@ -824,7 +780,10 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraProj));
 	
 	glLoadIdentity();
-	gluLookAt(eye.x, eye.y, eye.z,
+    if (collide)
+        gluLookAt(eye[0],shake(), eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
+    else
+        gluLookAt(eye.x, eye.y, eye.z,
 			  center.x, center.y, center.z,
 			  up.x, up.y, up.z);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(cameraView));
@@ -834,7 +793,10 @@ void display()	{
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightProj));
 	
 	glLoadIdentity();
-	gluLookAt(lightpos.x, lightpos.y, lightpos.z,
+    if (collide)
+        gluLookAt(eye[0],shake(), eye[2], center[0], center[1], center[2], up[0], up[1], up[2]);
+    else
+        gluLookAt(lightpos.x, lightpos.y, lightpos.z,
 			  lightpos.x - lightdir.x, lightpos.y - lightdir.y, lightpos.z - lightdir.z,
 			  0.0f, 1.0f, 0.0f);
 	glGetFloatv(GL_MODELVIEW_MATRIX, glm::value_ptr(lightView));
@@ -856,7 +818,7 @@ void display()	{
 	// Begin actual stuff
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	setFrameBuffer(shadowFBO);
-	collide = false;
+	//collide = false;
 	
 	drawless = true;
 	glDisable(GL_LIGHTING);
@@ -912,7 +874,7 @@ void display()	{
 	glLightfv(GL_LIGHT0, GL_SPECULAR, glm::value_ptr(glm::vec4(0, 0, 0, 0)));
 
 	glTranslatef(0.0f, 0.0f, curZ);
-	RenderSkybox(glm::vec3(0.0f, -200.0f, 0.0f),front, back, upper, down, lefty, righty,1000);
+	RenderSkybox(glm::vec3(0.0f, -150.0f, 0.0f), environment);
 	glTranslatef(0.0f, 0.0f, -curZ);
 	drawScene();
 
@@ -988,10 +950,18 @@ void display()	{
 		glAccum(GL_MULT, 0.5);
 		glAccum(GL_ACCUM, 0.5);
 		glAccum(GL_RETURN, 1.0);
+        collide = false;
 	}
 	else if(collide)	{
-		cout << "Hawwwwwww!\n";
-		pause();
+		cout << "Collision!\n";
+    if(step)    {
+        pause();
+        run = 1;
+        timeCollision = frameCount;
+        step = 0;
+    }
+        
+                //pause();
 	}
 	
 	glutSwapBuffers();
