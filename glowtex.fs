@@ -5,7 +5,7 @@ varying vec2 UV;
 uniform int w, h;
 uniform sampler2D tex;
 
-float sigma = 3.0;
+float sigma = 4.0;
 
 float getGauss(float x, float y)	{
 	float twvar = 2 * sigma * sigma;
