@@ -64,18 +64,19 @@ GLuint stars_tex, fbo, depthbuf;
 GLuint environment;
 GLfloat starsW, starsH, shadowW, shadowH;
 al openal;
-GLfloat collisionFrame;
+GLfloat collisionFrame, recoveryFrame;
 bool ended;
 
 float shake(){
     float time = frameCount - collisionFrame;
-    float sinCollision = 4.0f * sin (time / 200.0f);
+    float sinCollision = 4.0f * sin (time / 100.0f);
     float sin2Collision = 1.5f * sin (time / 1.0f);
     float expCollision = exp2f(-time/25.0f) * sin2Collision + sinCollision;
     return eye[1] + expCollision;
 }
 
 void preGLInit()	{
+	recoveryFrame = -10000;
 	ended = false;
 	run = 1, winW = 500, winH = 500, keyModifiers = 0;
 	zoom = 1.0f;
@@ -195,7 +196,7 @@ void GLInit()	{
 void resizeWindow(int w, int h)	{
 	winW = w;
 	winH = h;
-	
+
 	// Let's not change our view for different window sizes.
 	int smaller = min(w,h);
 	wLo = (w-smaller)/2;
@@ -219,6 +220,7 @@ void resizeWindow(int w, int h)	{
 }
 
 void postGLInit()	{
+	cout << ".";
 	// Initialising the shader with the file names and then pushing into the vector somehow doesn't work. :-/
 #ifndef __APPLE__
 	glewInit();
@@ -232,23 +234,28 @@ void postGLInit()	{
 #else
 	shaders[0].init(string(PATH) + "shaders/tex.vs", string(PATH) + "shaders/glowtex.fs");
 #endif
+	cout << "Shaders in place!" << endl;
 	
-	Image *img = readP3(string(PATH) + "textures/heightmap.desert.ppm");
+	Image *img = readP3(string(PATH) + "textures/heightmap.desert.ppm");	cout << ".";
 	if(img != NULL)
 		terr = new Terrain(img, string(PATH) + "textures/colormap.desert.ppm", 10);
-	
+	cout << ".";
+	environment = loadTexture(string(PATH) + "textures/sky.ppm");	cout << ".";
+	cout << "Got the textures!" << endl;
+
 	plane.readOBJ(string(PATH) + "objects/plane.obj");
 	plane.load();
-	plane.save = true;
+	plane.save = true;	cout << ".";
 	
 	star.readOBJ(string(PATH) + "objects/star.obj");
-	star.load();
+	star.load();	cout << ".";
 	
 	allObjects.clear();
 	allObjects.resize(3);
-	allObjects[0].readOBJ(string(PATH) + "objects/torus.obj");
-	allObjects[1].readOBJ(string(PATH) + "objects/cube.obj");
-	allObjects[2].readOBJ(string(PATH) + "objects/house.obj");
+	allObjects[0].readOBJ(string(PATH) + "objects/torus.obj");	cout << ".";
+	allObjects[1].readOBJ(string(PATH) + "objects/cube.obj");	cout << ".";
+	allObjects[2].readOBJ(string(PATH) + "objects/house.obj");	cout << ".";
+	cout << "All set! Just gear up!!" << endl;
 	
 	for (int j = 0; j < OBJECT_COUNT; j++)	{
 		int random = rand();
@@ -265,9 +272,6 @@ void postGLInit()	{
 		obs->obj = obj;
 		obstaclesList.push_back(obs);
 	}
-
-	
-	environment = loadTexture(string(PATH) + "textures/environment.ppm");
 	
 	//Load identity modelview
 	glMatrixMode(GL_MODELVIEW);
@@ -327,8 +331,10 @@ void keyboardFunc(unsigned char key, int x, int y)	{
 	switch (key) {
 		
 		case ' ':
-			if(ended)
+			if(ended)	{
+				recoveryFrame = frameCount;
 				resume();
+			}
 			else
 				run ? pause() : resume();
 			break;
@@ -775,6 +781,70 @@ void drawScene()	{
 	glPopMatrix();
 }
 
+void drawHUD()	{
+	glPushAttrib(GL_ENABLE_BIT);
+	glPushAttrib(GL_CURRENT_BIT);
+	glPushAttrib(GL_DEPTH_BUFFER_BIT);
+
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(wLo, wHi, hHi, hLo, -1.0, 10.0);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_BLEND);
+	glDisable(GL_ALPHA_TEST);
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glLoadIdentity();
+
+	glTranslatef(wLo, 20.0f, -5.0f);
+	glScalef(1.0f, -1.0f, 1.0f);
+	glBegin(GL_QUADS);
+    glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(wHi - wLo, 0.0, 0.0);
+    glVertex3f(wHi - wLo, 20.0, 0.0);
+    glVertex3f(0.0, 20.0, 0.0);
+	glEnd();
+
+	glRasterPos2i(10, 5);
+
+	glColor3f(1.0f, 0.0f, 0.0f);
+
+	ostringstream hud;
+	hud << score << " Stars Collected.   "
+		<< (int)fps << " FPS Performance.   ";
+
+	if(ended)
+		hud << "Press <Space> to resume.!! Hope you're having fun!";
+	else if (!boost && ((frameCount / 300) & 1) == 1)
+		hud << "Too many obstacles? Press 'n' to turn on boost mode!";
+	else if(!boost)
+		hud << "Press <Space> to pause or resume the game.";
+	else
+		hud << "Too difficult? Too easy? Press 'n' again to turn off boost mode!";
+
+	string s = hud.str();
+	void * font = GLUT_BITMAP_HELVETICA_12;
+	for (string::iterator i = s.begin(); i != s.end(); ++i)
+	{
+		char c = *i;
+		glutBitmapCharacter(font, c);
+	}
+
+	// Making sure we can render 3d again
+	glPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+
+	glPopAttrib();
+	glPopAttrib();
+	glPopAttrib();
+}
+
 void display()	{
 	
 	//Calculate & save matrices
@@ -965,7 +1035,7 @@ void display()	{
 		glAccum(GL_RETURN, 1.0);
 		collide = ended = 0;
 	}
-	else if(collide && !ended)	{
+	else if(collide && !ended && frameCount - recoveryFrame > 10)	{
 		ended = 1;
 		cout << "Collision!\n";
 		openal.play(2);
@@ -974,15 +1044,16 @@ void display()	{
 		collisionFrame = frameCount;
 		step = 0;
 	}
-	
+
+	drawHUD();
 	glutSwapBuffers();
 	frameCount++;
+	collide = false;
 	
 	t2 = glutGet(GLUT_ELAPSED_TIME);
 	double dt = ((double)t2 - (double)t1) / (double)1000;
 	if(dt > 0.25)	{
 		fps = (double)(frameCount - lastCount)/dt;
-		cout << fps << " FPS, Score: " << score << "\n";
 		t1 = glutGet(GLUT_ELAPSED_TIME);
 		lastCount = frameCount;
 	}
@@ -1021,6 +1092,7 @@ void iter(int single)	{
 int main(int argc, char * argv[])		{
 	srand((unsigned)time(NULL));
 	openal.init();
+	cout << "Sounds loaded!" << endl;
 
 	// Need to double buffer for animation
 	glutInit(&argc,argv);
@@ -1028,7 +1100,7 @@ int main(int argc, char * argv[])		{
 	
 	// Create and position the graphics window
 	glutInitWindowPosition( 100, 100 );
-	winW = winH = 500;
+	winW = winH = 650;
 	glutInitWindowSize( winW, winH );
 	glutCreateWindow( "PaperPlane 3D" );
 	
@@ -1038,7 +1110,7 @@ int main(int argc, char * argv[])		{
 	GLInit();
 	//initialize things which need GLInit before
 	postGLInit();
-	
+
 	// Callback for graphics image redrawing
 	glutDisplayFunc( display );
 	
@@ -1049,10 +1121,13 @@ int main(int argc, char * argv[])		{
 	// Set up the callback function for resizing windows
 	glutReshapeFunc( resizeWindow );
 
+#ifdef DEBUG
 	// Click
 	glutMouseFunc(clickFunc);
 	// Drag
 	glutMotionFunc(dragFunc);
+#endif
+
 	// Hover
 	glutPassiveMotionFunc(hoverFunc);
 

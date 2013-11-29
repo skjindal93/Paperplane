@@ -59,14 +59,14 @@ void al::init()	{
 	alSourcei(source[0], AL_LOOPING, AL_TRUE);
 
 	alSourcef(source[1], AL_PITCH, 1.0f);
-	alSourcef(source[1], AL_GAIN, 1.0f);
+	alSourcef(source[1], AL_GAIN, 0.75f);
 	alSourcefv(source[1], AL_POSITION, listenerPos);
 	alSourcefv(source[1], AL_VELOCITY, listenerVel);
 	alSourcei(source[1], AL_BUFFER,buffer[1]);
 	alSourcei(source[1], AL_LOOPING, AL_FALSE);
 
 	alSourcef(source[2], AL_PITCH, 1.0f);
-	alSourcef(source[2], AL_GAIN, 1.0f);
+	alSourcef(source[2], AL_GAIN, 0.75f);
 	alSourcefv(source[2], AL_POSITION, listenerPos);
 	alSourcefv(source[2], AL_VELOCITY, listenerVel);
 	alSourcei(source[2], AL_BUFFER,buffer[2]);

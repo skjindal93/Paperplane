@@ -23,6 +23,8 @@
 #include <ctime>
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <limits>
 using namespace std;
 
@@ -32,7 +34,6 @@ using namespace std;
 #include <GLUT/glut.h>
 #include <OpenGL/glext.h>
 #include <AL/alut.h>
-#define PATH "resources/"
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #else
@@ -40,22 +41,21 @@ using namespace std;
 #include <windows.h>
 #include <GL/freeglut.h>
 #include <gl/glext.h>
-#define PATH "paperplane\\"
 
 #else
 #include <GL/gl.h>
 #include <GL/glut.h>
 #include <GL/glext.h>
 
-#define PATH ""
+#endif
+#endif
 
-#endif
-#endif
+#define PATH "resources/"
 
 /* GLM */
-#include "../glm/glm.hpp"
-#include "../glm/gtc/matrix_transform.hpp"
-#include "../glm/gtc/type_ptr.hpp"
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 /* Project Libraries */
 #include "al.h"

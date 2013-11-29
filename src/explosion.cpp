@@ -43,7 +43,7 @@ void newSpeed (float dest[3])
     z = (2.0 * ((GLfloat) rand ()) / ((GLfloat) RAND_MAX)) - 1.0;
 
     
-    len = 0.5 * sqrt (x * x + y * y + z * z);
+    len = 0.25 * sqrt (x * x + y * y + z * z);
     
     if (len)
 	{
@@ -55,7 +55,7 @@ void newSpeed (float dest[3])
     
     dest[0] = x;
     dest[1] = y;
-    dest[2] = z;
+    dest[2] = z - 3.0;
 }
 
 
@@ -102,7 +102,7 @@ void newExplosion (int x, int y, int z)
         newSpeed (debris[i].orientationSpeed);
     }
     
-    fuel = 100;
+    fuel = 1000;
 }
 
 void exp(void){
@@ -111,6 +111,7 @@ void exp(void){
     if (fuel > 0)
     {
         glPushAttrib(GL_ENABLE_BIT);
+		glPushAttrib(GL_CURRENT_BIT);
         glPushMatrix ();
         glDisable (GL_LIGHTING);
         glDisable (GL_DEPTH_TEST);
@@ -155,12 +156,10 @@ void exp(void){
             
             glPopMatrix ();
         }
-                glPopAttrib();
-    }
+		glPopAttrib();
+		glPopAttrib();
 
-    if (fuel > 0)
-	{
-        for (i = 0; i < NUM_PARTICLES; i++)
+		for (i = 0; i < NUM_PARTICLES; i++)
 	    {
             particles[i].position[0] += particles[i].speed[0] * 0.2;
             particles[i].position[1] += particles[i].speed[1] * 0.2;
