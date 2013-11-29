@@ -2,7 +2,7 @@
 //  shading.h
 //  PaperPlane
 //
-//  Created by Shivanker Goel on 09/11/13.
+//  Created by Shivanker Goel and Shubham Jindal on 09/11/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 

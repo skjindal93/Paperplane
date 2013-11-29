@@ -2,7 +2,7 @@
 //  image.h
 //  PaperPlane
 //
-//  Created by Shivanker Goel on 19/10/13.
+//  Created by Shivanker Goel and Shubham Jindal on 19/10/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 

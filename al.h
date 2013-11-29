@@ -2,7 +2,7 @@
 //  al.h
 //  PaperPlane
 //
-//  Created by Shivanker Goel on 29/11/13.
+//  Created by Shivanker Goel and Shubham Jindal on 29/11/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 

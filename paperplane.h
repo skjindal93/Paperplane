@@ -2,7 +2,7 @@
 //  paperplane.h
 //  PaperPlane
 //
-//  Created by Shivanker Goel on 25/10/13.
+//  Created by Shivanker Goel and Shubham Jindal on 25/10/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 

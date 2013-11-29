@@ -2,7 +2,7 @@
 //  main.cpp
 //  PaperPlane
 //
-//  Created by Shivanker Goel on 15/10/13.
+//  Created by Shivanker Goel and Shubham Jindal on 15/10/13.
 //  Copyright (c) 2013 Shivanker. All rights reserved.
 //
 
