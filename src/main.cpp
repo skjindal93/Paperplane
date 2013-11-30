@@ -229,11 +229,20 @@ void postGLInit()	{
 		Shader s;
 		shaders.push_back(s);
 	}
+
+#define STRINGIFY(x) #x
+	char vs[] =
+#include "tex.vs"
+;
+	char fs[] =
 #ifdef __APPLE__
-	shaders[0].init(string(PATH) + "shaders/tex.vs", string(PATH) + "shaders/glowtex.apple.fs");
+#include "glowtex.apple.fs"
 #else
-	shaders[0].init(string(PATH) + "shaders/tex.vs", string(PATH) + "shaders/glowtex.fs");
+#include "glowtex.fs"
 #endif
+;
+
+	shaders[0].init(vs, fs);
 	cout << "Shaders in place!" << endl;
 	
 	Image *img = readP3(string(PATH) + "textures/heightmap.desert.ppm");	cout << ".";

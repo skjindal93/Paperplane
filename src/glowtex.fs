@@ -1,8 +1,8 @@
-#define PI 3.1415926535897932384626433832795
-
+STRINGIFY(
 varying vec2 UV;
 
-uniform int w, h;
+uniform int w;
+uniform int h;
 uniform sampler2D tex;
 
 float sigma = 4.0;
@@ -50,5 +50,4 @@ void main()	{
 	gl_FragColor = vec4(0.4 * gl_FragColor.xyz, 1.1 * gl_FragColor.w) + 0.75 * orig;
 	//gl_FragColor.w = min(1.0, gl_FragColor.w);
 	
-}
-
+})

@@ -8,15 +8,13 @@
 
 #include "paperplane.h"
 
-Shader::Shader(int activate)	{
+Shader::Shader()	{
 	pID = vID = fID = 0;
-	this->activate = activate;
 }
 
-Shader::Shader(string vert, string frag, int activate)	{
+Shader::Shader(string vert, string frag)	{
 	pID = vID = fID = 0;
-	this->activate = activate;
-	init(vert, frag);
+	initFromFile(vert, frag);
 }
 
 char* readFile(string file)	{
@@ -42,47 +40,42 @@ char* getShaderLog(unsigned int shader)	{
 	return buffer;
 }
 
-void Shader::init(string vertFile, string fragFile)	{
+void Shader::init(char* vShader, char* fShader)	{
 	char* log;
 	pID = glCreateProgram();
-	
-	if(activate & SHADER_VERT)	{
-		vID = glCreateShader(GL_VERTEX_SHADER);
-		char* vShader = readFile(vertFile); int vLen = (int)strlen(vShader);
-		
-		glShaderSource(vID, 1, (const char**)&vShader, &vLen);
-		glCompileShader(vID);
-		
-		log = getShaderLog(vID);
-		if(strlen(log))	{
-			cerr << "Compilation error in vertex shader:\n"
-			<< log << endl;
-		}
-		delete[] log;
-		
-		glAttachShader(pID, vID);
-		
-		glDeleteShader(vID);
-		delete[] vShader;
+
+	vID = glCreateShader(GL_VERTEX_SHADER);
+	int vLen = (int)strlen(vShader);
+
+	glShaderSource(vID, 1, (const char**)&vShader, &vLen);
+	glCompileShader(vID);
+
+	log = getShaderLog(vID);
+	if(strlen(log))	{
+		cerr << "Compilation error in vertex shader:\n"
+		<< log << endl;
 	}
-	if(activate & SHADER_FRAG)	{
-		fID = glCreateShader(GL_FRAGMENT_SHADER);
-		char* fShader = readFile(fragFile); int fLen = (int)strlen(fShader);
-		
-		glShaderSource(fID, 1, (const char**)&fShader, &fLen);
-		glCompileShader(fID);
-		
-		log = getShaderLog(fID);
-		if(strlen(log))	{
-			cerr << "Compilation error in fragment shader:\n"
-			<< log << endl;
-		}
-		delete[] log;
-		glAttachShader(pID, fID);
-		
-		glDeleteShader(fID);
-		delete[] fShader;
+	delete[] log;
+
+	glAttachShader(pID, vID);
+
+	glDeleteShader(vID);
+
+	fID = glCreateShader(GL_FRAGMENT_SHADER);
+	int fLen = (int)strlen(fShader);
+
+	glShaderSource(fID, 1, (const char**)&fShader, &fLen);
+	glCompileShader(fID);
+
+	log = getShaderLog(fID);
+	if(strlen(log))	{
+		cerr << "Compilation error in fragment shader:\n"
+		<< log << endl;
 	}
+	delete[] log;
+	glAttachShader(pID, fID);
+
+	glDeleteShader(fID);
 
 	glLinkProgram(pID);
 
@@ -92,15 +85,23 @@ void Shader::init(string vertFile, string fragFile)	{
 		<< log << endl;
 	}
 	delete[] log;
-	
+
 	glValidateProgram(pID);
     GLint status;
 	glGetProgramiv(pID, GL_VALIDATE_STATUS, &status);
-	
+
 	if (status == GL_FALSE)	{
 		cerr << "Error validating shader program." << endl;
 		exit(9);
 	}
+}
+
+void Shader::initFromFile(string vertFile, string fragFile)	{
+	char* vShader = readFile(vertFile);
+	char* fShader = readFile(fragFile);
+	init(vShader, fShader);
+	delete[] vShader;
+	delete[] fShader;
 }
 
 void Shader::bind()	{
@@ -112,7 +113,7 @@ void Shader::unbind()	{
 }
 
 Shader::~Shader()	{
-	if(activate & SHADER_VERT)	glDeleteShader(vID);
-	if(activate & SHADER_FRAG)	glDetachShader(pID, fID);
+	glDeleteShader(vID);
+	glDetachShader(pID, fID);
 	glDeleteProgram(pID);
 }
