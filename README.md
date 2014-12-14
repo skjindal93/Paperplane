@@ -1,6 +1,6 @@
 Paperplane
 ==========
 
-The famous PaperPlane 3D game on PC
+The famous PaperPlane 3D game for Mac.
 
-Android Play Store Link for the Game : https://play.google.com/store/apps/details?id=com.wavecade.mypaperplaneplanetlite
+[Here](https://www.dropbox.com/s/ok7p5yitpzd2bg2/PaperPlane.tar.gz?dl=0) is the link for the OSX distributable.
